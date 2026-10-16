@@ -9,6 +9,6 @@ DerivedData/
 .build/
 .swiftpm/
 *.xcuserstate
-BadgeCrecheCI.xcodeproj/
+
 
 .DS_Store

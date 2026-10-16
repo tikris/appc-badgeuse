@@ -48,7 +48,7 @@ Votre badge crèche dans Wallet
 
 **Texte promotionnel** (170 car. max)
 ```
-Le QR code de la badgeuse de votre crèche dans Apple Wallet, affiché automatiquement quand vous arrivez. Gratuit, sans compte, sans publicité.
+Le QR code de votre crèche dans Apple Wallet, affiché automatiquement en arrivant. Gratuit, sans compte, rien dans le cloud : vos données vous appartiennent.
 ```
 
 **Description**
@@ -64,8 +64,8 @@ EN TROIS ÉTAPES
 
 Le nom de l'enfant et celui de la crèche sont facultatifs : c'est vous qui choisissez ce qui s'affiche.
 
-VOS DONNÉES RESTENT CHEZ VOUS
-Aucun compte, aucun serveur, aucune publicité, aucun traçage. Le badge est créé directement sur votre iPhone : personne d'autre que vous n'y a accès.
+VOS DONNÉES VOUS APPARTIENNENT
+Rien n'est stocké dans le cloud ni sur un serveur distant. Aucun compte, aucune publicité, aucun traçage : le badge est créé directement sur votre iPhone et personne d'autre que vous n'y a accès.
 
 UNE INITIATIVE DE L'APPC
 Badge Crèche est proposée gratuitement par l'association Parents à Paris Centre (APPC). Rejoignez la communauté des parents de Paris Centre depuis l'application !

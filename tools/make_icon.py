@@ -13,7 +13,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
-ICONSET = ROOT / "App" / "Assets.xcassets" / "AppIcon.appiconset"
+ICONSET = ROOT / "App" / "BadgeCreche" / "Assets.xcassets" / "AppIcon.appiconset"
 DOCS = ROOT / "docs"
 
 CORAL_TOP = (255, 143, 107)

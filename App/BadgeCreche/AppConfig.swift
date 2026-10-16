@@ -37,6 +37,6 @@ enum AppConfig {
         aboutText: "Badge créé avec l'application Badge Crèche, une initiative bénévole de l'association Parents à Paris Centre (APPC). Application indépendante, non affiliée à la Ville de Paris ni au gestionnaire de votre crèche.",
         communityURL: "https://chat.whatsapp.com/CiqGioqeO4yA93wTwvFJMW",
         communityLinkTitle: "Rejoindre la communauté WhatsApp de l'APPC",
-        privacyText: "Ce badge a été créé sur votre iPhone. Aucune donnée n'est transmise à l'APPC."
+        privacyText: "Badge créé sur votre iPhone. L'application ne stocke rien dans le cloud et ne transmet rien à l'APPC : vos données vous appartiennent."
     )
 }

@@ -31,9 +31,20 @@ struct AboutView: View {
                     }
                 }
 
-                Section("Vos données") {
-                    Text("Aucun compte, aucun serveur : le QR code, le nom de l'enfant et l'adresse restent sur votre iPhone et dans Apple Wallet. L'APPC n'y a jamais accès.")
-                    Text("La recherche d'adresse passe par Apple Plans. Si la synchronisation iCloud de Wallet est activée, Apple synchronise le badge entre vos appareils.")
+                Section("Vos données vous appartiennent") {
+                    Label {
+                        Text("Rien n'est stocké dans le cloud ni sur un serveur distant. L'application fonctionne entièrement sur votre iPhone : l'APPC n'a ni serveur, ni base de données, et n'a jamais accès à vos informations.")
+                    } icon: {
+                        Image(systemName: "icloud.slash")
+                    }
+                    Label {
+                        Text("Vos données vous appartiennent entièrement. Vous pouvez les modifier ou les effacer à tout moment ; elles ne sont ni vendues, ni partagées, ni analysées. Le badge est même exclu des sauvegardes iCloud de l'iPhone.")
+                    } icon: {
+                        Image(systemName: "hand.raised")
+                    }
+                    Text("Ce qui relève d'Apple, et non de l'application : la recherche d'adresse interroge Apple Plans, et si vous avez activé la synchronisation iCloud de Wallet, Apple synchronise le badge entre vos appareils (désactivable dans les réglages iCloud).")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                     Link("Politique de confidentialité", destination: AppConfig.privacyPolicyURL)
                 }
 
@@ -42,6 +53,7 @@ struct AboutView: View {
                     legalRow("Statut", AppConfig.legalRegistration)
                     legalRow("Siège", AppConfig.legalSeat)
                     legalRow("Directeur de la publication", AppConfig.publicationDirector)
+                    legalRow("Données personnelles", "Aucune donnée n'est collectée, stockée dans le cloud ni transmise à distance par l'application. Vos données restent sur votre appareil et vous appartiennent entièrement.")
                     if !AppConfig.contactEmail.isEmpty, let mail = URL(string: "mailto:\(AppConfig.contactEmail)") {
                         Link(destination: mail) {
                             legalRow("Contact", AppConfig.contactEmail)

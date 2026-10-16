@@ -35,7 +35,7 @@ struct WelcomeView: View {
                     step(
                         symbol: "wallet.pass",
                         title: "Ajoutez-le à Apple Wallet",
-                        detail: "Tout reste sur votre iPhone : aucun compte, aucune donnée envoyée."
+                        detail: "Tout reste sur votre iPhone : rien n'est stocké dans le cloud, vos données vous appartiennent."
                     )
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

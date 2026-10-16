@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// Stockage local du badge : un fichier JSON chiffré par iOS (protection des données),
-/// jamais envoyé sur un serveur.
+/// jamais envoyé sur un serveur et exclu des sauvegardes iCloud de l'appareil.
 @MainActor
 @Observable
 final class BadgeStore {
@@ -25,6 +25,10 @@ final class BadgeStore {
     func save(_ newBadge: BadgeData) throws {
         let data = try JSONEncoder().encode(newBadge)
         try data.write(to: fileURL, options: [.atomic, .completeFileProtection])
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        var url = fileURL
+        try url.setResourceValues(values)
         needsWalletRefresh = badge != nil
         badge = newBadge
     }

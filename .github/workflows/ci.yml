@@ -52,28 +52,35 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: modèle Xcode 26 (MainActor par défaut)
+          - name: projet tel quel
             isolation: MainActor
             approachable: "YES"
-            swift: "5.0"
-          - name: modèle Xcode 16 (sans isolation par défaut)
+          - name: sans isolation MainActor par défaut
             isolation: nonisolated
             approachable: "NO"
-            swift: "5.0"
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
-      - name: Génération du projet
-        run: brew install xcodegen && xcodegen generate
-      - name: Compilation
+      - name: Compilation simulateur (Debug)
         run: |
           set -o pipefail
           xcodebuild build -quiet \
-            -project BadgeCrecheCI.xcodeproj -scheme BadgeCreche \
+            -project BadgeCreche.xcodeproj -scheme BadgeCreche -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
-            SWIFT_VERSION=${{ matrix.swift }} \
             SWIFT_DEFAULT_ACTOR_ISOLATION=${{ matrix.isolation }} \
             SWIFT_APPROACHABLE_CONCURRENCY=${{ matrix.approachable }}
+      - name: Compilation iPhone (Release, sans signature)
+        if: matrix.isolation == 'MainActor'
+        run: |
+          set -o pipefail
+          xcodebuild build -quiet \
+            -project BadgeCreche.xcodeproj -scheme BadgeCreche -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO
+          APP=$(find ~/Library/Developer/Xcode/DerivedData -path '*Release-iphoneos/BadgeCreche.app' -maxdepth 6 | head -1)
+          ls "$APP"
+          plutil -p "$APP/Info.plist" | grep -E "CFBundleDisplayName|NSCameraUsageDescription|ITSAppUsesNonExemptEncryption|MinimumOSVersion|CFBundleIcons"
+          test -f "$APP/PrivacyInfo.xcprivacy" && test -f "$APP/Assets.car" && echo "Ressources OK"
