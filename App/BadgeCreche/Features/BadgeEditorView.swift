@@ -24,15 +24,17 @@ struct BadgeEditorView: View {
     @State private var isReadingQRCode = false
     @State private var errorMessage: String?
 
-    init(existing: BadgeData?, onSave: @escaping (BadgeData) throws -> Void) {
+    /// `prefill` : valeurs initiales d'un nouveau badge (captures d'écran).
+    init(existing: BadgeData?, prefill: BadgeData? = nil, onSave: @escaping (BadgeData) throws -> Void) {
         self.existing = existing
         self.onSave = onSave
-        _qrPayload = State(initialValue: existing?.qrPayload)
-        _showsChildName = State(initialValue: existing?.showsChildName ?? false)
-        _childFirstName = State(initialValue: existing?.childFirstName ?? "")
-        _childLastName = State(initialValue: existing?.childLastName ?? "")
-        _crecheName = State(initialValue: existing?.crecheName ?? "")
-        _address = State(initialValue: existing?.address)
+        let initial = existing ?? prefill
+        _qrPayload = State(initialValue: initial?.qrPayload)
+        _showsChildName = State(initialValue: initial?.showsChildName ?? false)
+        _childFirstName = State(initialValue: initial?.childFirstName ?? "")
+        _childLastName = State(initialValue: initial?.childLastName ?? "")
+        _crecheName = State(initialValue: initial?.crecheName ?? "")
+        _address = State(initialValue: initial?.address)
     }
 
     private var canSave: Bool {
@@ -54,6 +56,7 @@ struct BadgeEditorView: View {
                 }
                 AddressSection(address: $address)
             }
+            .defaultScrollAnchor(ScreenshotMode.scene == .address ? .bottom : nil)
             .navigationTitle(existing == nil ? "Nouveau badge" : "Modifier le badge")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

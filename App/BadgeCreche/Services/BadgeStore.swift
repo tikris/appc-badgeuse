@@ -22,6 +22,12 @@ final class BadgeStore {
         }
     }
 
+    /// Badge de démonstration gardé en mémoire (captures d'écran).
+    init(inMemory badge: BadgeData?) {
+        fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("demo-badge.json")
+        self.badge = badge
+    }
+
     func save(_ newBadge: BadgeData) throws {
         let data = try JSONEncoder().encode(newBadge)
         try data.write(to: fileURL, options: [.atomic, .completeFileProtection])

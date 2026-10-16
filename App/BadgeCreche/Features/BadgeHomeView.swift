@@ -98,6 +98,9 @@ struct BadgeHomeView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+        } else if ScreenshotMode.scene != nil {
+            StaticAddPassButton()
+                .frame(height: 50)
         } else if errorMessage == nil {
             ProgressView()
         }
@@ -121,6 +124,7 @@ struct BadgeHomeView: View {
     }
 
     private func preparePass() {
+        guard ScreenshotMode.scene == nil else { return }
         do {
             let newPass = try WalletService.makePass(for: badge)
             pass = newPass
