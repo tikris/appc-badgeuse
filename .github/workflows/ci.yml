@@ -24,7 +24,10 @@ jobs:
       - name: Tests unitaires
         env:
           BADGE_TEST_OUTPUT: ${{ runner.temp }}/pass
-        run: swift test
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee "$RUNNER_TEMP/tests.log"
+          grep -E "Photo 12 Mpx|Executed" "$RUNNER_TEMP/tests.log" | tail -3 || true
       - name: Vérification indépendante du .pkpass avec OpenSSL
         run: |
           set -euo pipefail
@@ -82,5 +85,6 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
           APP=$(find ~/Library/Developer/Xcode/DerivedData -path '*Release-iphoneos/BadgeCreche.app' -maxdepth 6 | head -1)
           ls "$APP"
+          echo "Taille de l'app : $(du -sh "$APP" | cut -f1) (exécutable : $(du -h "$APP/BadgeCreche" | cut -f1))"
           plutil -p "$APP/Info.plist" | grep -E "CFBundleDisplayName|NSCameraUsageDescription|ITSAppUsesNonExemptEncryption|MinimumOSVersion|CFBundleIcons"
           test -f "$APP/PrivacyInfo.xcprivacy" && test -f "$APP/Assets.car" && echo "Ressources OK"

@@ -9,38 +9,32 @@ import PassKit
 @MainActor
 enum WalletService {
     private static var cachedIdentity: PassSigningIdentity?
+    private static let library = PKPassLibrary()
 
-    static var isAvailable: Bool {
-        PKPassLibrary.isPassLibraryAvailable() && PKAddPassesViewController.canAddPasses()
-    }
+    static let isAvailable = PKPassLibrary.isPassLibraryAvailable() && PKAddPassesViewController.canAddPasses()
 
     static func makePass(for badge: BadgeData) throws -> PKPass {
         let data = try PassBuilder.pkpass(
             for: badge,
             identity: try signingIdentity(),
-            images: PassArtwork.passImages(),
+            images: PassArtwork.passImages,
             branding: AppConfig.passBranding
         )
         return try PKPass(data: data)
     }
 
-    static func isInWallet(_ pass: PKPass) -> Bool {
-        PKPassLibrary().containsPass(pass)
+    /// Le pass tel qu'enregistré dans Wallet, s'il y est.
+    static func installedPass(matching pass: PKPass) -> PKPass? {
+        library.pass(withPassTypeIdentifier: pass.passTypeIdentifier, serialNumber: pass.serialNumber)
     }
 
     /// Remplace silencieusement le pass déjà présent dans Wallet. Renvoie false s'il est absent.
     static func replaceInWallet(with pass: PKPass) -> Bool {
-        let library = PKPassLibrary()
-        return library.containsPass(pass) && library.replacePass(with: pass)
-    }
-
-    static func walletURL(for pass: PKPass) -> URL? {
-        PKPassLibrary().pass(withPassTypeIdentifier: pass.passTypeIdentifier, serialNumber: pass.serialNumber)?.passURL
+        library.containsPass(pass) && library.replacePass(with: pass)
     }
 
     static func removeFromWallet(_ pass: PKPass) {
-        let library = PKPassLibrary()
-        if let existing = library.pass(withPassTypeIdentifier: pass.passTypeIdentifier, serialNumber: pass.serialNumber) {
+        if let existing = installedPass(matching: pass) {
             library.removePass(existing)
         }
     }

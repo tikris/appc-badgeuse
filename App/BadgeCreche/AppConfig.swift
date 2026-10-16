@@ -12,7 +12,6 @@ enum AppConfig {
 
     // MARK: Liens (site GitHub Pages généré depuis le dossier docs/ du dépôt)
 
-    static let websiteURL = URL(string: "https://tikris.github.io/appc-badgeuse/")!
     static let privacyPolicyURL = URL(string: "https://tikris.github.io/appc-badgeuse/confidentialite.html")!
     static let legalNoticeURL = URL(string: "https://tikris.github.io/appc-badgeuse/mentions-legales.html")!
     static let sourceCodeURL = URL(string: "https://github.com/tikris/appc-badgeuse")!

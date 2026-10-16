@@ -2,12 +2,14 @@ import UIKit
 
 /// Images du pass (icône, logo) dessinées à la volée : PNG standards, sans dépendre
 /// du traitement des PNG par Xcode. Même géométrie que tools/make_icon.py.
+/// Tout est calculé une seule fois puis gardé en mémoire (quelques Ko).
 @MainActor
 enum PassArtwork {
     static let coral = UIColor(red: 255 / 255, green: 122 / 255, blue: 89 / 255, alpha: 1)
     static let navy = UIColor(red: 34 / 255, green: 48 / 255, blue: 90 / 255, alpha: 1)
 
-    static func passImages() -> [String: Data] {
+    /// icon.png / logo.png en 1x, 2x et 3x.
+    static let passImages: [String: Data] = {
         var images: [String: Data] = [:]
         for scale in 1...3 {
             let suffix = scale == 1 ? "" : "@\(scale)x"
@@ -21,17 +23,22 @@ enum PassArtwork {
             }
         }
         return images
-    }
+    }()
 
-    /// Icône utilisée dans l'interface (écran d'accueil, À propos).
+    /// Icône de l'interface (accueil, badge, À propos), dessinée une fois par taille.
     static func appIcon(side: CGFloat) -> UIImage {
-        renderer(side: side, scale: 3, opaque: false).image { _ in
+        if let cached = iconCache[side] { return cached }
+        let image = renderer(side: side, scale: 3, opaque: false).image { _ in
             let rect = CGRect(x: 0, y: 0, width: side, height: side)
             coral.setFill()
             UIBezierPath(roundedRect: rect, cornerRadius: side * 0.225).fill()
             drawMotif(in: rect)
         }
+        iconCache[side] = image
+        return image
     }
+
+    private static var iconCache: [CGFloat: UIImage] = [:]
 
     private static func renderer(side: CGFloat, scale: Int, opaque: Bool) -> UIGraphicsImageRenderer {
         let format = UIGraphicsImageRendererFormat()

@@ -10,6 +10,7 @@ struct BadgeHomeView: View {
     @Environment(\.openURL) private var openURL
     @State private var pass: PKPass?
     @State private var isInWallet = false
+    @State private var walletURL: URL?
     @State private var errorMessage: String?
     @State private var statusMessage: String?
     @State private var isConfirmingDeletion = false
@@ -66,14 +67,14 @@ struct BadgeHomeView: View {
         if !WalletService.isAvailable {
             Label("Apple Wallet n'est pas disponible sur cet appareil.", systemImage: "exclamationmark.triangle")
                 .foregroundStyle(.secondary)
-        } else if let pass, isInWallet {
+        } else if isInWallet {
             VStack(spacing: 12) {
                 Label("Badge présent dans Apple Wallet", systemImage: "checkmark.seal.fill")
                     .font(.headline)
                     .foregroundStyle(.green)
-                if let url = WalletService.walletURL(for: pass) {
+                if let walletURL {
                     Button {
-                        openURL(url)
+                        openURL(walletURL)
                     } label: {
                         Label("Ouvrir dans Wallet", systemImage: "wallet.pass")
                             .frame(maxWidth: .infinity)
@@ -87,6 +88,7 @@ struct BadgeHomeView: View {
                 AddPassToWalletButton([pass]) { added in
                     if added {
                         isInWallet = true
+                        walletURL = WalletService.installedPass(matching: pass)?.passURL
                         statusMessage = "Badge ajouté à Apple Wallet."
                     }
                 }
@@ -128,7 +130,9 @@ struct BadgeHomeView: View {
                     statusMessage = "Badge mis à jour dans Apple Wallet."
                 }
             }
-            isInWallet = WalletService.isInWallet(newPass)
+            let installed = WalletService.installedPass(matching: newPass)
+            isInWallet = installed != nil
+            walletURL = installed?.passURL
         } catch {
             pass = nil
             errorMessage = error.localizedDescription

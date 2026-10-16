@@ -68,7 +68,8 @@ App/BadgeCreche/
     CMSSignature.swift       signature PKCS#7 détachée (RFC 5652)
     PassSigningIdentity.swift  lecture du .p12, Pass Type ID / Team ID depuis le certificat
     DER.swift, ZipArchive.swift  encodage ASN.1 et ZIP minimalistes (aucune dépendance)
-  Services/                  stockage local, Wallet, lecture et rendu des QR codes, images du pass
+    QRCodeReader.swift       lecture du QR code (photo réduite à 2048 px, PDF), testée sur macOS
+  Services/                  stockage local, Wallet, aperçu du QR code et images du pass (mis en cache)
   Features/                  écrans SwiftUI (accueil, éditeur, adresse, scanner, À propos)
 docs/                        site GitHub Pages : présentation, confidentialité, mentions légales
 Tests/                       tests de signature avec une fausse chaîne de certificats
