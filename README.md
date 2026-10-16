@@ -51,7 +51,7 @@ L'identifiant du type de pass et le Team ID sont **lus directement dans le certi
 
 - Sur un iPhone réel (scan caméra) ou sur le simulateur (glisser [`docs/demo-qr.png`](docs/demo-qr.png) sur le simulateur pour l'ajouter à Photos, puis « Choisir une photo »).
 - Pour installer sur votre iPhone : le brancher (ou même Wi-Fi), le choisir comme destination dans Xcode, **⌘R**. La première fois : *Réglages → Confidentialité et sécurité → Mode développeur* à activer sur l'iPhone.
-- Les textes et liens propres à l'APPC sont regroupés dans [`App/BadgeCreche/AppConfig.swift`](App/BadgeCreche/AppConfig.swift). Un `#warning` rappelle de compléter les mentions légales.
+- Les textes et liens propres à l'APPC sont regroupés dans [`App/BadgeCreche/AppConfig.swift`](App/BadgeCreche/AppConfig.swift). Le numéro RNA y est à reporter dès réception (ainsi que dans `docs/mentions-legales.html`).
 - La première fois, vérifier à la crèche que la badgeuse lit bien le QR code affiché sur l'écran.
 
 ## Architecture

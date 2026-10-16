@@ -18,11 +18,11 @@ enum AppConfig {
 
     // MARK: Mentions légales
 
-    #warning("Compléter les mentions légales de l'APPC (siège, RNA, directeur de la publication, e-mail) puis supprimer ce #warning.")
-    static let contactEmail = "" // ex. "contact@mondomaine.fr" (laisser vide masque la ligne)
-    static let legalSeat = "[Adresse du siège social – à compléter]"
-    static let legalRegistration = "Association loi 1901 – RNA [W75XXXXXXX – à compléter]"
-    static let publicationDirector = "[Prénom Nom – à compléter], président de l'APPC"
+    static let contactEmail = "christophe.amalric@appc.paris"
+    static let legalSeat = "6, rue Montmartre, 75001 Paris"
+    // À mettre à jour (ici et dans docs/mentions-legales.html) dès réception du numéro RNA.
+    static let legalRegistration = "Association loi 1901 – n° RNA en cours d'attribution"
+    static let publicationDirector = "Christophe Amalric, président de l'APPC"
 
     // MARK: Pass Wallet
 

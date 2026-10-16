@@ -14,7 +14,7 @@ Conseil : soumettre cet après-midi **à la fois** la bêta externe (lien TestFl
 
 - [ ] Compte **Apple Developer Program** actif (99 €/an). Un compte *organisation* au nom de l'APPC exige un numéro D-U-N-S (plusieurs jours) ; un compte *individuel* affiche le nom de son titulaire comme vendeur sur l'App Store.
 - [ ] Certificat **Pass Type ID** créé et intégré (README, section 2).
-- [ ] Mentions légales complétées : `App/BadgeCreche/AppConfig.swift` (le `#warning` disparaît une fois la ligne supprimée), `docs/mentions-legales.html` et l'e-mail dans `docs/confidentialite.html` (repérer `à compléter`).
+- [x] Mentions légales complétées (app et site). Reste à reporter le numéro RNA dès réception : `App/BadgeCreche/AppConfig.swift` et `docs/mentions-legales.html`.
 
 ## 1. Site web (URL de confidentialité et d'assistance, obligatoires)
 
