@@ -56,7 +56,6 @@ struct BadgeEditorView: View {
                 }
                 AddressSection(address: $address)
             }
-            .defaultScrollAnchor(ScreenshotMode.scene == .address ? .bottom : nil)
             .navigationTitle(existing == nil ? "Nouveau badge" : "Modifier le badge")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

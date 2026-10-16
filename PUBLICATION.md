@@ -41,9 +41,9 @@ Nouvelle app : plateforme iOS, langue principale **Français**, bundle ID de vot
 Badge Crèche – APPC
 ```
 
-**Sous-titre** (30 car. max)
+**Sous-titre** (30 car. max) — en France, l'app Apple Wallet s'appelle « Cartes » sur l'iPhone
 ```
-Votre badge crèche dans Wallet
+Badge crèche dans l'app Cartes
 ```
 
 **Texte promotionnel** (170 car. max)
@@ -75,7 +75,7 @@ Application indépendante, non affiliée à la Ville de Paris ni aux gestionnair
 
 **Mots-clés** (100 car. max)
 ```
-crèche,badge,badgeuse,QR code,wallet,pass,parents,Paris,garde,enfant,pointage,APPC,famille
+crèche,badge,badgeuse,QR code,cartes,wallet,pass,parents,Paris,garde,enfant,pointage,APPC
 ```
 
 **Catégorie** : Utilitaires (secondaire : Style de vie) · **Prix** : gratuit · **Copyright** : `2026 Parents à Paris Centre`
@@ -89,7 +89,9 @@ crèche,badge,badgeuse,QR code,wallet,pass,parents,Paris,garde,enfant,pointage,A
 
 **Chiffrement** : l'app n'utilise que des signatures numériques (exemption) → `App Uses Non-Exempt Encryption = NO` dans l'Info.plist.
 
-**Captures d'écran** : iPhone 6,9" (simulateur iPhone 17 Pro Max, `Cmd + S`), 3 à 5 écrans : accueil, éditeur rempli (QR + carte), badge créé, ajout à Wallet, À propos. Utiliser le QR de démonstration et un prénom fictif.
+**Captures d'écran** : prêtes dans [`AppStore/captures/`](AppStore/captures) (iPhone 6,9", 1320 × 2868, données fictives), à glisser dans l'ordre dans la section *iPhone 6,9"*. Elles sont produites par le workflow « Captures App Store » (simulateur, dépôt dans `AppStore/raw/`) puis mises en forme par `python3 tools/make_store_screenshots.py AppStore/raw`.
+
+**Icône** : rien à envoyer, App Store Connect la prend dans le build. Copie en 1024 × 1024 : [`AppStore/icone-1024.png`](AppStore/icone-1024.png).
 
 **Notes pour l'App Review** (en anglais) :
 ```

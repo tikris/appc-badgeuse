@@ -15,7 +15,7 @@ struct ContentView: View {
         } else {
             _store = State(initialValue: BadgeStore())
         }
-        _isEditing = State(initialValue: scene == .editor || scene == .address)
+        _isEditing = State(initialValue: scene == .editor)
         _isShowingAbout = State(initialValue: scene == .about)
     }
 

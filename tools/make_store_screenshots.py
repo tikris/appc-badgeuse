@@ -18,10 +18,10 @@ NAVY_TOP, NAVY_BOTTOM = (34, 48, 90), (22, 31, 61)
 CORAL_LIGHT = (255, 176, 150)
 FONT_DIR = Path("/usr/share/fonts/opentype/inter")
 
+# En France, l'app Apple Wallet s'appelle « Cartes » : on cite les deux noms.
 SLIDES = [
-    ("badge", "Votre badge de crèche dans Apple Wallet", "Il s'affiche tout seul quand vous arrivez"),
+    ("badge", "Votre badge crèche dans l'app Cartes", "Apple Wallet : il s'affiche tout seul quand vous arrivez"),
     ("editor", "Scannez le QR code de la crèche", "Ou importez une photo, une capture ou un PDF"),
-    ("address", "Indiquez l'adresse, Wallet fait le reste", "Le badge apparaît à l'approche de la crèche"),
     ("about", "Rien dans le cloud", "Vos données restent sur votre iPhone et vous appartiennent"),
     ("welcome", "Gratuit, sans compte, sans publicité", "Une initiative de l'association Parents à Paris Centre"),
 ]
@@ -31,17 +31,30 @@ def font(name: str, size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(str(FONT_DIR / name), size)
 
 
-def wrap(draw: ImageDraw.ImageDraw, text: str, typeface, max_width: int) -> list[str]:
+def greedy_wrap(draw: ImageDraw.ImageDraw, text: str, typeface, max_width: float) -> list[str]:
     lines, current = [], ""
     for word in text.split():
         candidate = f"{current} {word}".strip()
-        if draw.textlength(candidate, font=typeface) <= max_width:
+        if not current or draw.textlength(candidate, font=typeface) <= max_width:
             current = candidate
         else:
             lines.append(current)
             current = word
     lines.append(current)
     return lines
+
+
+def wrap(draw: ImageDraw.ImageDraw, text: str, typeface, max_width: int) -> list[str]:
+    """Même nombre de lignes qu'un retour à la ligne classique, mais des lignes de longueur équilibrée."""
+    count = len(greedy_wrap(draw, text, typeface, max_width))
+    low, high = 0.0, float(max_width)
+    while high - low > 1:
+        middle = (low + high) / 2
+        if len(greedy_wrap(draw, text, typeface, middle)) <= count:
+            high = middle
+        else:
+            low = middle
+    return greedy_wrap(draw, text, typeface, high)
 
 
 def background() -> Image.Image:

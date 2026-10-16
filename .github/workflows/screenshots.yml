@@ -63,10 +63,10 @@ jobs:
             --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
           xcrun simctl install "$UDID" "$APP"
           mkdir -p shots
-          for scene in badge editor address about welcome; do
+          for scene in badge editor about welcome; do
             xcrun simctl terminate "$UDID" "$BUNDLE" 2>/dev/null || true
             xcrun simctl launch "$UDID" "$BUNDLE" -screenshot "$scene" -AppleLanguages "(fr)" -AppleLocale fr_FR
-            case "$scene" in editor|address) sleep 15 ;; *) sleep 8 ;; esac
+            case "$scene" in editor) sleep 15 ;; *) sleep 8 ;; esac
             xcrun simctl io "$UDID" screenshot --type=png "shots/$scene.png"
           done
           sips -g pixelWidth -g pixelHeight shots/*.png

@@ -6,7 +6,7 @@ import SwiftUI
 /// enregistré sur l'appareil.
 enum ScreenshotMode {
     enum Scene: String {
-        case welcome, editor, address, badge, about
+        case welcome, editor, badge, about
     }
 
     static let scene: Scene? = {
