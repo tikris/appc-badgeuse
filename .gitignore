@@ -1,0 +1,14 @@
+# Secrets de signature Wallet : ne JAMAIS les publier (dépôt public)
+*.p12
+PassSigning.plist
+*.mobileprovision
+
+# Xcode / SwiftPM
+xcuserdata/
+DerivedData/
+.build/
+.swiftpm/
+*.xcuserstate
+BadgeCrecheCI.xcodeproj/
+
+.DS_Store

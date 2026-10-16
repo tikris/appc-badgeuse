@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Copier ce fichier sous le nom PassSigning.plist dans le projet Xcode (cible cochée). -->
+	<!-- Il est ignoré par git : ne le publiez pas. -->
+	<key>CertificatePassword</key>
+	<string>mot-de-passe-choisi-lors-de-l-export-du-p12</string>
+</dict>
+</plist>
