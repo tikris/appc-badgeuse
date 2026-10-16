@@ -18,6 +18,8 @@ enum QRCodeReaderError: LocalizedError {
 }
 
 /// Retrouve le contenu du QR code dans une photo, une capture d'écran ou un PDF.
+/// La détection tourne hors du fil principal (fonctions `nonisolated`).
+@MainActor
 enum QRCodeReader {
     static func payload(in fileData: Data) async throws -> String {
         let payloads = await Task.detached(priority: .userInitiated) {
