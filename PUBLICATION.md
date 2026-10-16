@@ -1,0 +1,112 @@
+# Publication « légère » — checklist
+
+## Calendrier réaliste
+
+| Étape | Délai |
+|---|---|
+| Build envoyé sur App Store Connect, **TestFlight interne** (jusqu'à 100 membres de l'équipe) | **aujourd'hui**, ~30 min après l'envoi |
+| **TestFlight externe** (lien public à partager aux parents) | après la *Beta App Review* : souvent quelques heures, parfois 24 h |
+| **App Store** | après l'App Review : en général 24 à 48 h. Impossible à garantir pour cet après-midi |
+
+Conseil : soumettre cet après-midi **à la fois** la bêta externe (lien TestFlight public pour un premier cercle de parents) et la version App Store.
+
+## 0. Prérequis bloquants
+
+- [ ] Compte **Apple Developer Program** actif (99 €/an). Un compte *organisation* au nom de l'APPC exige un numéro D-U-N-S (plusieurs jours) ; un compte *individuel* affiche le nom de son titulaire comme vendeur sur l'App Store.
+- [ ] Certificat **Pass Type ID** créé et intégré (README, section 2).
+- [ ] Mentions légales complétées : `App/BadgeCreche/AppConfig.swift` (le `#warning` disparaît une fois la ligne supprimée), `docs/mentions-legales.html` et l'e-mail dans `docs/confidentialite.html` (repérer `à compléter`).
+
+## 1. Site web (URL de confidentialité et d'assistance, obligatoires)
+
+1. Fusionner la branche dans `main`.
+2. GitHub → *Settings* → *Pages* → *Deploy from a branch* → `main` / `/docs` → *Save*.
+3. Vérifier, après 1 à 2 minutes :
+   - <https://tikris.github.io/appc-badgeuse/> (URL d'assistance et URL marketing)
+   - <https://tikris.github.io/appc-badgeuse/confidentialite.html> (URL de politique de confidentialité)
+   - <https://tikris.github.io/appc-badgeuse/demo-qr.png> (QR code pour les testeurs Apple)
+
+## 2. Build
+
+1. Xcode → cible → *General* : *Version* `1.0`, *Build* `1`.
+2. Destination *Any iOS Device (arm64)* → *Product* → *Archive*.
+3. *Organizer* → *Distribute App* → *App Store Connect* → *Upload*.
+4. Tester d'abord sur votre iPhone via TestFlight interne : création du badge, ajout à Wallet, puis passage devant la badgeuse.
+
+## 3. Fiche App Store Connect
+
+Nouvelle app : plateforme iOS, langue principale **Français**, bundle ID de votre projet, SKU `appc-badge-creche`.
+
+**Nom** (30 car. max)
+```
+Badge Crèche – APPC
+```
+
+**Sous-titre** (30 car. max)
+```
+Votre badge crèche dans Wallet
+```
+
+**Texte promotionnel** (170 car. max)
+```
+Le QR code de la badgeuse de votre crèche dans Apple Wallet, affiché automatiquement quand vous arrivez. Gratuit, sans compte, sans publicité.
+```
+
+**Description**
+```
+Fini le badge de crèche oublié ou introuvable au fond du sac !
+
+Badge Crèche transforme le QR code remis par votre crèche en début d'année en badge Apple Wallet. À l'approche de la crèche, il s'affiche tout seul sur l'écran verrouillé : il ne reste plus qu'à le présenter à la badgeuse, à l'arrivée comme au départ.
+
+EN TROIS ÉTAPES
+• Scannez le QR code de la crèche, ou importez-le depuis une photo, une capture d'écran ou un PDF.
+• Indiquez l'adresse de la crèche.
+• Ajoutez le badge à Apple Wallet.
+
+Le nom de l'enfant et celui de la crèche sont facultatifs : c'est vous qui choisissez ce qui s'affiche.
+
+VOS DONNÉES RESTENT CHEZ VOUS
+Aucun compte, aucun serveur, aucune publicité, aucun traçage. Le badge est créé directement sur votre iPhone : personne d'autre que vous n'y a accès.
+
+UNE INITIATIVE DE L'APPC
+Badge Crèche est proposée gratuitement par l'association Parents à Paris Centre (APPC). Rejoignez la communauté des parents de Paris Centre depuis l'application !
+
+Application indépendante, non affiliée à la Ville de Paris ni aux gestionnaires de crèches.
+```
+
+**Mots-clés** (100 car. max)
+```
+crèche,badge,badgeuse,QR code,wallet,pass,parents,Paris,garde,enfant,pointage,APPC,famille
+```
+
+**Catégorie** : Utilitaires (secondaire : Style de vie) · **Prix** : gratuit · **Copyright** : `2026 Parents à Paris Centre`
+
+**URL d'assistance** : `https://tikris.github.io/appc-badgeuse/#support`
+**URL de confidentialité** : `https://tikris.github.io/appc-badgeuse/confidentialite.html`
+
+**Confidentialité de l'app (« étiquette »)** : *Données non collectées*.
+
+**Classification par âge** : répondre « Non » / « Aucun » partout → 4+. Ne pas cocher « Made for Kids » (l'app s'adresse aux parents).
+
+**Chiffrement** : l'app n'utilise que des signatures numériques (exemption) → `App Uses Non-Exempt Encryption = NO` dans l'Info.plist.
+
+**Captures d'écran** : iPhone 6,9" (simulateur iPhone 17 Pro Max, `Cmd + S`), 3 à 5 écrans : accueil, éditeur rempli (QR + carte), badge créé, ajout à Wallet, À propos. Utiliser le QR de démonstration et un prénom fictif.
+
+**Notes pour l'App Review** (en anglais) :
+```
+Badge Crèche lets parents store the QR code their nursery gives them for its check-in terminal ("badgeuse") as an Apple Wallet pass that appears on the Lock Screen near the nursery. No account and no server: the pass is generated and signed on the device.
+
+How to test:
+1. Open https://tikris.github.io/appc-badgeuse/demo-qr.png and save the image to Photos (or display it on another screen and use "Scanner le QR code").
+2. Tap "Créer mon badge", then "Choisir une photo ou une capture d'écran" and pick the image.
+3. Optionally enable "Afficher le nom de l'enfant" and type a first name.
+4. In "Adresse de la crèche", search for "2 rue de Rivoli Paris" and pick a result.
+5. Tap "Enregistrer", then "Add to Apple Wallet".
+
+The app is published free of charge by the non-profit parents' association Parents à Paris Centre (APPC). It is not affiliated with the City of Paris or with nursery operators. The WhatsApp link in "À propos" invites parents to join the association's community.
+```
+
+## 4. Après la mise en ligne
+
+- Annoncer l'app sur la communauté WhatsApp avec le lien App Store (ou le lien TestFlight public en attendant).
+- Recueillir les premiers retours : la badgeuse de chaque crèche lit-elle bien l'écran ? Le badge s'affiche-t-il bien à l'arrivée ?
+- Pistes V2 : plusieurs enfants/crèches, signature côté serveur protégée par App Attest, version Android (Google Wallet).
