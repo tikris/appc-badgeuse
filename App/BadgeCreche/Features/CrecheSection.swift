@@ -12,8 +12,9 @@ enum CrecheCatalog {
 /// Choix de la crèche : les 3 plus proches de la position, sinon la liste complète.
 struct CrecheSection: View {
     @Binding var address: CrecheAddress?
-    /// Appelé avec le nom de la crèche choisie (pour préremplir le nom affiché sur le badge).
-    let onSelect: (String) -> Void
+    /// Appelé avec le nom de la crèche choisie (pour préremplir le nom affiché sur le badge), la façon
+    /// dont elle l'a été et la crèche de la liste (statistiques facultatives, voir CrecheStat).
+    let onSelect: (_ name: String, _ source: CrecheStat.Source, _ creche: Creche?) -> Void
     /// Demande la position dès l'affichage (création d'un nouveau badge).
     let locatesOnAppear: Bool
 
@@ -39,7 +40,7 @@ struct CrecheSection: View {
             } else {
                 suggestions
                 NavigationLink {
-                    CrecheListView(directory: CrecheCatalog.paris, onSelect: select, onManualAddress: selectManual)
+                    CrecheListView(directory: CrecheCatalog.paris, onSelect: { select($0, source: .list) }, onManualAddress: selectManual)
                 } label: {
                     Label("Autre crèche", systemImage: "list.bullet")
                 }
@@ -74,7 +75,7 @@ struct CrecheSection: View {
         case .located(let latitude, let longitude):
             ForEach(CrecheCatalog.paris?.nearest(latitude: latitude, longitude: longitude) ?? [], id: \.creche.id) { nearby in
                 Button {
-                    select(nearby.creche)
+                    select(nearby.creche, source: .nearby)
                 } label: {
                     CrecheRow(creche: nearby.creche, distance: nearby.distance)
                 }
@@ -90,14 +91,14 @@ struct CrecheSection: View {
         }
     }
 
-    private func select(_ creche: Creche) {
+    private func select(_ creche: Creche, source: CrecheStat.Source) {
         address = creche.badgeAddress
-        onSelect(creche.name)
+        onSelect(creche.name, source, creche)
     }
 
     private func selectManual(_ manual: CrecheAddress) {
         address = manual
-        onSelect(manual.name ?? "")
+        onSelect(manual.name ?? "", .manual, nil)
     }
 }
 

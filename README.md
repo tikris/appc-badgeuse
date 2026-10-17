@@ -7,7 +7,8 @@ L'APPC met à disposition une badgeuse intégrée à son portefeuille iPhone pou
 - Parcours : l'app demande la position et propose **les 3 crèches les plus proches** ; « Autre crèche » ouvre la liste des **1 066 établissements d'accueil de Paris** (recherche, classement par arrondissement), avec en dernier recours une recherche d'adresse Apple Plans.
 - Champs : crèche (obligatoire, pour l'affichage à proximité), QR code (obligatoire), nom de la crèche et nom de l'enfant affichés sur le badge (facultatifs ; celui de l'enfant est désactivé par défaut).
 - Liste des crèches : construite par `tools/fetch_creches.py` (workflow « Données crèches ») à partir de l'[Apur](https://opendata.apur.org) (ODbL), adresses normalisées avec la Base Adresse Nationale ; embarquée dans l'app (`App/BadgeCreche/Resources/creches-paris.json`, ~180 Ko, licence ODbL) : aucun appel réseau, la position ne quitte pas l'iPhone.
-- 100 % local : **rien n'est stocké dans le cloud ni sur un serveur**, pas de compte, pas de base de données. Le pass est **signé sur l'iPhone** et les données appartiennent entièrement à l'utilisateur (fichier même exclu des sauvegardes iCloud).
+- Local : **le QR code, le nom de l'enfant et la position ne quittent jamais l'iPhone**, pas de compte. Le pass est **signé sur l'iPhone** et les données appartiennent entièrement à l'utilisateur (fichier même exclu des sauvegardes iCloud).
+- Statistiques **facultatives, désactivées par défaut** : avec l'accord du parent, la crèche choisie est envoyée une fois au Matomo auto-hébergé de l'APPC (voir **[MATOMO.md](MATOMO.md)**). Sans serveur configuré dans `AppConfig.statsEndpoint`, rien n'est envoyé et l'option n'apparaît pas.
 - Version 1 : un seul badge par iPhone (mis à jour en place dans Wallet).
 - Une initiative de l'association **Parents à Paris Centre (APPC)**, avec un lien vers la [communauté WhatsApp](https://chat.whatsapp.com/CiqGioqeO4yA93wTwvFJMW) dans l'application et au dos du pass.
 

@@ -48,7 +48,7 @@ Badge crèche dans l'app Cartes
 
 **Texte promotionnel** (170 car. max)
 ```
-Le QR code de votre crèche dans Apple Wallet, affiché automatiquement en arrivant. Gratuit, sans compte, rien dans le cloud : vos données vous appartiennent.
+Le QR code de votre crèche dans Apple Wallet, affiché automatiquement en arrivant. Gratuit, sans compte ni publicité : vos données restent sur votre iPhone.
 ```
 
 **Description**
@@ -65,7 +65,7 @@ EN TROIS ÉTAPES
 Le nom de l'enfant et celui de la crèche sont facultatifs : c'est vous qui choisissez ce qui s'affiche.
 
 VOS DONNÉES VOUS APPARTIENNENT
-Rien n'est stocké dans le cloud ni sur un serveur distant. Aucun compte, aucune publicité, aucun traçage : le badge est créé directement sur votre iPhone et personne d'autre que vous n'y a accès.
+Votre QR code, le nom de votre enfant et votre position ne quittent jamais votre iPhone. Aucun compte, aucune publicité, aucun traçage : le badge est créé directement sur l'iPhone. Seule option, désactivée par défaut : partager de façon anonyme le nom de votre crèche avec l'APPC, pour ses statistiques.
 
 UNE INITIATIVE DE L'APPC
 Badge Crèche est proposée gratuitement par l'association Parents à Paris Centre (APPC). Rejoignez la communauté des parents de Paris Centre depuis l'application !
@@ -83,7 +83,7 @@ crèche,badge,badgeuse,QR code,cartes,wallet,pass,parents,Paris,garde,enfant,poi
 **URL d'assistance** : `https://tikris.github.io/appc-badgeuse/#support`
 **URL de confidentialité** : `https://tikris.github.io/appc-badgeuse/confidentialite.html`
 
-**Confidentialité de l'app (« étiquette »)** : *Données non collectées*. La position est utilisée, mais uniquement sur l'appareil (tri des crèches) et jamais transmise : au sens d'Apple, elle n'est pas « collectée ».
+**Confidentialité de l'app (« étiquette »)** : *Données non associées à votre identité* → *Données d'utilisation* → *Interactions avec le produit*, finalité *Analyses* ; aucune donnée utilisée pour vous suivre. Ce sont les statistiques facultatives (crèche choisie, envoyée au Matomo de l'APPC seulement si le parent l'accepte, voir [MATOMO.md](MATOMO.md)). La position est utilisée uniquement sur l'appareil (tri des crèches) et jamais transmise : au sens d'Apple, elle n'est pas « collectée ». Le fichier `PrivacyInfo.xcprivacy` déclare la même chose.
 
 **Classification par âge** : répondre « Non » / « Aucun » partout → 4+. Ne pas cocher « Made for Kids » (l'app s'adresse aux parents).
 
@@ -97,7 +97,7 @@ crèche,badge,badgeuse,QR code,cartes,wallet,pass,parents,Paris,garde,enfant,poi
 
 **Notes pour l'App Review** (en anglais) :
 ```
-Badge Crèche lets parents store the QR code their nursery gives them for its check-in terminal ("badgeuse") as an Apple Wallet pass that appears on the Lock Screen near the nursery. No account and no server: the pass is generated and signed on the device.
+Badge Crèche lets parents store the QR code their nursery gives them for its check-in terminal ("badgeuse") as an Apple Wallet pass that appears on the Lock Screen near the nursery. No account: the pass is generated and signed on the device. Optional, opt-in analytics (off by default): if the parent enables "Partager le nom de ma crèche", the app sends the chosen nursery's name, once, to the association's self-hosted Matomo server. Nothing else (no QR code, child name, location or identifier).
 
 How to test:
 1. Open https://tikris.github.io/appc-badgeuse/demo-qr.png and save the image to Photos (or display it on another screen and use "Scanner le QR code").

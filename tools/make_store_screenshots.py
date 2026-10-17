@@ -22,7 +22,7 @@ FONT_DIR = Path("/usr/share/fonts/opentype/inter")
 SLIDES = [
     ("badge", "Votre badge crèche dans l'app Cartes", "Apple Wallet : il s'affiche tout seul quand vous arrivez"),
     ("editor", "Votre crèche, trouvée autour de vous", "Ou choisissez-la parmi toutes les crèches de Paris"),
-    ("about", "Rien dans le cloud", "Vos données restent sur votre iPhone et vous appartiennent"),
+    ("about", "Vos données restent sur votre iPhone", "QR code, nom de l'enfant et position ne sont jamais envoyés"),
     ("welcome", "Gratuit, sans compte, sans publicité", "Une initiative de l'association Parents à Paris Centre"),
 ]
 

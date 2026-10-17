@@ -3,6 +3,7 @@ import SwiftUI
 /// À propos, confidentialité et mentions légales.
 struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(CrecheStats.consentKey) private var sharesCrecheStats = false
 
     var body: some View {
         NavigationStack {
@@ -33,12 +34,12 @@ struct AboutView: View {
 
                 Section("Vos données vous appartiennent") {
                     Label {
-                        Text("Rien n'est stocké dans le cloud ni sur un serveur distant. L'application fonctionne entièrement sur votre iPhone : l'APPC n'a ni serveur, ni base de données, et n'a jamais accès à vos informations.")
+                        Text("Votre QR code, le nom de votre enfant et votre position ne quittent jamais votre iPhone : ils ne sont stockés ni dans le cloud ni sur un serveur, et l'APPC n'y a jamais accès.")
                     } icon: {
                         Image(systemName: "icloud.slash")
                     }
                     Label {
-                        Text("Vos données vous appartiennent entièrement. Vous pouvez les modifier ou les effacer à tout moment ; elles ne sont ni vendues, ni partagées, ni analysées. Le badge est même exclu des sauvegardes iCloud de l'iPhone.")
+                        Text("Vos données vous appartiennent entièrement. Vous pouvez les modifier ou les effacer à tout moment ; elles ne sont ni vendues, ni partagées. Le badge est même exclu des sauvegardes iCloud de l'iPhone.")
                     } icon: {
                         Image(systemName: "hand.raised")
                     }
@@ -46,6 +47,20 @@ struct AboutView: View {
                         Text("Votre position sert uniquement, au moment de créer le badge, à trier les crèches par distance. Le calcul se fait sur l'iPhone : la position n'est ni enregistrée ni transmise.")
                     } icon: {
                         Image(systemName: "location")
+                    }
+                    if CrecheStats.isAvailable {
+                        Toggle(isOn: $sharesCrecheStats) {
+                            Label {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Partager le nom de ma crèche, de façon anonyme")
+                                    Text("Facultatif, désactivé par défaut. Si vous l'activez, seuls le nom de la crèche et la façon dont vous l'avez choisie sont envoyés aux statistiques de l'APPC (Matomo, hébergé par l'association), une fois à l'enregistrement du badge.")
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+                            } icon: {
+                                Image(systemName: "chart.bar")
+                            }
+                        }
                     }
                     Text("Ce qui relève d'Apple, et non de l'application : la recherche d'une adresse hors liste interroge Apple Plans, et si vous avez activé la synchronisation iCloud de Wallet, Apple synchronise le badge entre vos appareils (désactivable dans les réglages iCloud).")
                         .font(.footnote)
@@ -58,7 +73,7 @@ struct AboutView: View {
                     legalRow("Statut", AppConfig.legalRegistration)
                     legalRow("Siège", AppConfig.legalSeat)
                     legalRow("Directeur de la publication", AppConfig.publicationDirector)
-                    legalRow("Données personnelles", "Aucune donnée n'est collectée, stockée dans le cloud ni transmise à distance par l'application. Vos données restent sur votre appareil et vous appartiennent entièrement.")
+                    legalRow("Données personnelles", personalDataNotice)
                     legalRow("Liste des crèches", "Contient des données de l'Apur (Atelier parisien d'urbanisme) sous licence ODbL, avec des adresses de la Base Adresse Nationale (Licence Ouverte).")
                     if !AppConfig.contactEmail.isEmpty, let mail = URL(string: "mailto:\(AppConfig.contactEmail)") {
                         Link(destination: mail) {
@@ -80,6 +95,12 @@ struct AboutView: View {
                 }
             }
         }
+    }
+
+    private var personalDataNotice: String {
+        let base = "Le QR code, le nom de l'enfant et votre position restent sur votre appareil : ils ne sont jamais collectés ni transmis. Vos données vous appartiennent entièrement."
+        guard CrecheStats.isAvailable else { return base }
+        return base + " Seule exception, facultative et désactivée par défaut : le partage anonyme du nom de la crèche pour les statistiques de l'APPC."
     }
 
     private var appVersion: String {

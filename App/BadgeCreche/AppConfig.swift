@@ -24,6 +24,13 @@ enum AppConfig {
     static let legalRegistration = "Association loi 1901 – n° RNA en cours d'attribution"
     static let publicationDirector = "Christophe Amalric, président de l'APPC"
 
+    // MARK: Statistiques facultatives (Matomo auto-hébergé, voir MATOMO.md)
+
+    /// Point de collecte Matomo, par ex. « https://stats.appc.paris/matomo.php ».
+    /// nil : aucune statistique n'est envoyée et l'option n'apparaît pas dans l'application.
+    static let statsEndpoint: URL? = nil
+    static let statsSiteID = 1
+
     // MARK: Pass Wallet
 
     static let passBranding = PassBranding(
@@ -36,6 +43,6 @@ enum AppConfig {
         aboutText: "Badge créé avec l'application Badge Crèche, une initiative bénévole de l'association Parents à Paris Centre (APPC). Application indépendante, non affiliée à la Ville de Paris ni au gestionnaire de votre crèche.",
         communityURL: "https://chat.whatsapp.com/CiqGioqeO4yA93wTwvFJMW",
         communityLinkTitle: "Rejoindre la communauté WhatsApp de l'APPC",
-        privacyText: "Badge créé sur votre iPhone. L'application ne stocke rien dans le cloud et ne transmet rien à l'APPC : vos données vous appartiennent."
+        privacyText: "Badge créé sur votre iPhone. Le QR code et le nom de l'enfant ne quittent jamais votre iPhone et l'APPC n'y a jamais accès : vos données vous appartiennent."
     )
 }

@@ -18,6 +18,9 @@ struct BadgeEditorView: View {
     @State private var showsCrecheName: Bool
     @State private var crecheName: String
     @State private var address: CrecheAddress?
+    /// Pour les statistiques facultatives : comment la crèche a été choisie pendant cette édition.
+    @State private var crecheChoice: (source: CrecheStat.Source, creche: Creche?)?
+    @AppStorage(CrecheStats.consentKey) private var sharesCrecheStats = false
 
     @State private var isScanning = false
     @State private var isImportingFile = false
@@ -48,9 +51,15 @@ struct BadgeEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                CrecheSection(address: $address, onSelect: { crecheName = $0 }, locatesOnAppear: existing == nil)
+                CrecheSection(address: $address, onSelect: { name, source, creche in
+                    crecheName = name
+                    crecheChoice = (source, creche)
+                }, locatesOnAppear: existing == nil)
                 qrSection
                 displaySection
+                if CrecheStats.isAvailable {
+                    statsSection
+                }
             }
             .navigationTitle(existing == nil ? "Nouveau badge" : "Modifier le badge")
             .navigationBarTitleDisplayMode(.inline)
@@ -145,6 +154,16 @@ struct BadgeEditorView: View {
             Text("Sur le badge (facultatif)")
         } footer: {
             Text("Uniquement si vous le souhaitez. Ces informations restent sur votre iPhone et dans Apple Wallet : elles ne sont jamais transmises à l'APPC.")
+        }
+    }
+
+    private var statsSection: some View {
+        Section {
+            Toggle("Partager le nom de ma crèche, de façon anonyme", isOn: $sharesCrecheStats)
+        } header: {
+            Text("Aider l'APPC (facultatif)")
+        } footer: {
+            Text("Pour savoir dans quelles crèches l'application est utilisée. Seuls le nom de la crèche et la façon dont vous l'avez choisie sont envoyés, une fois, à l'enregistrement : jamais le QR code, le nom de l'enfant ni votre position. Modifiable à tout moment dans À propos.")
         }
     }
 
@@ -251,6 +270,13 @@ struct BadgeEditorView: View {
         )
         do {
             try onSave(badge)
+            if let crecheChoice, existing?.address != address {
+                CrecheStats.send(CrecheStat(
+                    event: existing == nil ? .created : .crecheChanged,
+                    source: crecheChoice.source,
+                    creche: crecheChoice.creche
+                ))
+            }
             dismiss()
         } catch {
             errorMessage = error.localizedDescription

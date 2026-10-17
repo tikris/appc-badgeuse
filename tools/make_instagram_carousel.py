@@ -31,8 +31,8 @@ SLIDES = [
      "Rangé dans l'app Cartes (Apple Wallet), il s'affiche tout seul en arrivant à la crèche.", 0),
     ("editor", "Votre crèche, trouvée en un geste",
      "Les 3 plus proches vous sont proposées, et toutes les crèches de Paris sont dans la liste.", 0),
-    ("about", "Rien dans le cloud,\ntout reste chez vous",
-     "Vos données restent sur votre iPhone et vous appartiennent. L'APPC n'y a jamais accès.", None),
+    ("about", "Vos données restent\nsur votre iPhone",
+     "QR code, nom de l'enfant, position : rien n'est envoyé. L'APPC n'y a jamais accès.", None),
     ("welcome", "Gratuit, sans compte\net sans publicité",
      "Une initiative bénévole de l'association Parents à Paris Centre (APPC).", 0),
 ]
