@@ -91,6 +91,8 @@ crèche,badge,badgeuse,QR code,cartes,wallet,pass,parents,Paris,garde,enfant,poi
 
 **Captures d'écran** : prêtes dans [`AppStore/captures/`](AppStore/captures) (iPhone 6,9", 1320 × 2868, données fictives), à glisser dans l'ordre dans la section *iPhone 6,9"*. Elles sont produites par le workflow « Captures App Store » (simulateur, dépôt dans `AppStore/raw/`) puis mises en forme par `python3 tools/make_store_screenshots.py AppStore/raw`.
 
+**Carrousel Instagram** : 4 visuels 4:5 (1080 × 1350) dans [`AppStore/instagram/`](AppStore/instagram), tirés des mêmes captures par `python3 tools/make_instagram_carousel.py`.
+
 **Icône** : rien à envoyer, App Store Connect la prend dans le build. Copie en 1024 × 1024 : [`AppStore/icone-1024.png`](AppStore/icone-1024.png).
 
 **Notes pour l'App Review** (en anglais) :
