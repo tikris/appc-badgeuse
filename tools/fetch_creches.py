@@ -21,7 +21,6 @@ from collections import Counter
 from pathlib import Path
 
 LAYER = "https://carto2.apur.org/apur/rest/services/OPENDATA/EQUIPEMENT_PONCTUEL/MapServer/2"
-HUB_SEARCH = "https://opendata.apur.org/api/search/v1/collections/all/items"
 BAN_CSV = "https://api-adresse.data.gouv.fr/search/csv/"
 OUTPUT = Path(__file__).resolve().parent.parent / "App" / "BadgeCreche" / "Resources" / "creches-paris.json"
 USER_AGENT = "appc-badgeuse (https://github.com/tikris/appc-badgeuse)"
@@ -120,19 +119,6 @@ def normalize_addresses(rows):
     return result
 
 
-def licence_text():
-    try:
-        data = json.loads(request(HUB_SEARCH + "?" + urllib.parse.urlencode({"q": "EQUIPEMENT_PONCTUEL_PETITE_ENFANCE", "limit": 3})))
-        for feature in data.get("features", []):
-            props = feature.get("properties", {})
-            info = props.get("licenseInfo") or props.get("license")
-            if info:
-                return re.sub(r"<[^>]+>", " ", str(info)).strip()[:200]
-    except Exception as error:  # noqa: BLE001
-        print("Licence : erreur", error)
-    return None
-
-
 def main():
     output = Path(sys.argv[1]) if len(sys.argv) > 1 else OUTPUT
     params = {"where": "c_cainsee >= 75101 AND c_cainsee <= 75120", "outFields": "*", "outSR": "4326",
@@ -182,7 +168,7 @@ def main():
 
     document = {
         "source": "Apur – Équipements ponctuels « Petite enfance » (opendata.apur.org), adresses normalisées avec l'API Adresse (BAN)",
-        "licence": licence_text() or "Données ouvertes Apur – voir opendata.apur.org",
+        "licence": "ODbL (Open Database License) pour les données Apur ; adresses : Base Adresse Nationale, Licence Ouverte",
         "generated": datetime.date.today().isoformat(),
         "creches": creches,
     }
