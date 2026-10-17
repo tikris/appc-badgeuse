@@ -1,0 +1,23 @@
+name: Données crèches
+
+# Récupère la liste des crèches de Paris (open data, licence ODbL) et la dépose dans
+# l'application (App/BadgeCreche/Resources/creches-paris.json) : l'app n'a ensuite
+# besoin d'aucun réseau pour proposer les crèches.
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "tools/discover_creches.py"
+      - "tools/fetch_creches.py"
+      - ".github/workflows/creches.yml"
+
+jobs:
+  creches:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Découverte des jeux de données
+        run: python3 tools/discover_creches.py
