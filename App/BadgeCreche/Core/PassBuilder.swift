@@ -17,6 +17,9 @@ struct PassBranding {
 
 /// Construit le fichier .pkpass signé, entièrement sur l'appareil.
 enum PassBuilder {
+    /// Distance maximale (en mètres) à la crèche pour que Wallet propose le badge sur l'écran verrouillé.
+    static let relevantDistance = 20
+
     static func pkpass(
         for badge: BadgeData,
         identity: PassSigningIdentity,
@@ -115,6 +118,7 @@ enum PassBuilder {
                     "relevantText": branding.relevantText,
                 ] as [String: Any],
             ],
+            "maxDistance": relevantDistance,
             "generic": [
                 "primaryFields": primaryFields,
                 "secondaryFields": secondaryFields,

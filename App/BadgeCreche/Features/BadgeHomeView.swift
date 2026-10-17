@@ -108,7 +108,7 @@ struct BadgeHomeView: View {
 
     private var tips: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("Le badge s'affiche sur l'écran verrouillé à environ 100 m de la crèche (Service de localisation activé).", systemImage: "location")
+            Label("Le badge s'affiche sur l'écran verrouillé à \(PassBuilder.relevantDistance) m maximum de la crèche (Service de localisation activé).", systemImage: "location")
             Label("À tout moment : double-cliquez sur le bouton latéral pour ouvrir Wallet.", systemImage: "hand.tap")
             Label("Testez-le une première fois à la badgeuse et gardez le badge d'origine en secours.", systemImage: "checkmark.shield")
         }
@@ -128,12 +128,10 @@ struct BadgeHomeView: View {
         do {
             let newPass = try WalletService.makePass(for: badge)
             pass = newPass
-            if store.needsWalletRefresh {
-                store.needsWalletRefresh = false
-                if WalletService.replaceInWallet(with: newPass) {
-                    statusMessage = "Badge mis à jour dans Apple Wallet."
-                }
+            if store.needsWalletRefresh, WalletService.replaceInWallet(with: newPass) {
+                statusMessage = "Badge mis à jour dans Apple Wallet."
             }
+            store.walletRefreshed()
             let installed = WalletService.installedPass(matching: newPass)
             isInWallet = installed != nil
             walletURL = installed?.passURL

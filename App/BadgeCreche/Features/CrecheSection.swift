@@ -47,7 +47,7 @@ struct CrecheSection: View {
         } header: {
             Text("Votre crèche")
         } footer: {
-            Text("Votre position sert uniquement à trier les crèches, sur l'iPhone : elle n'est ni enregistrée ni transmise. Le badge s'affichera sur l'écran verrouillé à l'approche de la crèche (environ 100 m).")
+            Text("Votre position sert uniquement à trier les crèches, sur l'iPhone : elle n'est ni enregistrée ni transmise. Le badge s'affichera sur l'écran verrouillé devant la crèche (à \(PassBuilder.relevantDistance) m maximum).")
         }
         .onAppear {
             if locatesOnAppear, address == nil, location.status == .idle {

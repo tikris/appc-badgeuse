@@ -32,7 +32,7 @@ enum AppConfig {
         foregroundColor: "rgb(255, 255, 255)",
         labelColor: "rgb(255, 176, 150)",
         relevantText: "Vous arrivez à la crèche : votre badge est prêt.",
-        usageText: "Présentez ce QR code à la badgeuse à l'arrivée et au départ. Le badge apparaît automatiquement sur l'écran verrouillé à l'approche de la crèche. Gardez votre badge d'origine en secours.",
+        usageText: "Présentez ce QR code à la badgeuse à l'arrivée et au départ. Le badge apparaît automatiquement sur l'écran verrouillé devant la crèche. Gardez votre badge d'origine en secours.",
         aboutText: "Badge créé avec l'application Badge Crèche, une initiative bénévole de l'association Parents à Paris Centre (APPC). Application indépendante, non affiliée à la Ville de Paris ni au gestionnaire de votre crèche.",
         communityURL: "https://chat.whatsapp.com/CiqGioqeO4yA93wTwvFJMW",
         communityLinkTitle: "Rejoindre la communauté WhatsApp de l'APPC",

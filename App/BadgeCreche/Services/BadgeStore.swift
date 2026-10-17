@@ -8,7 +8,12 @@ import Observation
 final class BadgeStore {
     private(set) var badge: BadgeData?
     /// Vrai après une modification : la copie présente dans Wallet doit être remplacée.
-    var needsWalletRefresh = false
+    private(set) var needsWalletRefresh = false
+
+    /// À incrémenter quand le contenu du pass change (rayon d'affichage…) : la copie présente
+    /// dans Wallet est alors remplacée au lancement suivant, sans action du parent.
+    private static let passRevision = 2
+    private static let passRevisionKey = "passRevision"
 
     private let fileURL: URL
 
@@ -20,6 +25,8 @@ final class BadgeStore {
         if let data = try? Data(contentsOf: fileURL) {
             badge = try? JSONDecoder().decode(BadgeData.self, from: data)
         }
+        needsWalletRefresh = badge != nil
+            && UserDefaults.standard.integer(forKey: Self.passRevisionKey) < Self.passRevision
     }
 
     /// Badge de démonstration gardé en mémoire (captures d'écran).
@@ -37,6 +44,12 @@ final class BadgeStore {
         try url.setResourceValues(values)
         needsWalletRefresh = badge != nil
         badge = newBadge
+    }
+
+    /// Le pass généré est à jour : inutile de remplacer de nouveau la copie de Wallet.
+    func walletRefreshed() {
+        if needsWalletRefresh { needsWalletRefresh = false }
+        UserDefaults.standard.set(Self.passRevision, forKey: Self.passRevisionKey)
     }
 
     func delete() {

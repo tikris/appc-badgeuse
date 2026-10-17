@@ -55,7 +55,7 @@ Le QR code de votre crèche dans Apple Wallet, affiché automatiquement en arriv
 ```
 Fini le badge de crèche oublié ou introuvable au fond du sac !
 
-Badge Crèche transforme le QR code remis par votre crèche en début d'année en badge Apple Wallet. À l'approche de la crèche, il s'affiche tout seul sur l'écran verrouillé : il ne reste plus qu'à le présenter à la badgeuse, à l'arrivée comme au départ.
+Badge Crèche transforme le QR code remis par votre crèche en début d'année en badge Apple Wallet. Devant la crèche, il s'affiche tout seul sur l'écran verrouillé : il ne reste plus qu'à le présenter à la badgeuse, à l'arrivée comme au départ.
 
 EN TROIS ÉTAPES
 • Choisissez votre crèche : les plus proches vous sont proposées, et toutes les crèches de Paris sont dans la liste.
