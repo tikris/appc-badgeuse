@@ -67,7 +67,14 @@ jobs:
             xcrun simctl terminate "$UDID" "$BUNDLE" 2>/dev/null || true
             xcrun simctl launch "$UDID" "$BUNDLE" -screenshot "$scene" -AppleLanguages "(fr)" -AppleLocale fr_FR
             case "$scene" in editor) sleep 15 ;; *) sleep 8 ;; esac
-            xcrun simctl io "$UDID" screenshot --type=png "shots/$scene.png"
+            # Écran encore blanc (app pas encore affichée) : PNG d'environ 90 Ko, on réessaie.
+            for attempt in 1 2 3 4 5 6; do
+              xcrun simctl io "$UDID" screenshot --type=png "shots/$scene.png"
+              [ "$(stat -f%z "shots/$scene.png")" -gt 150000 ] && break
+              echo "$scene : écran encore vide (essai $attempt)"
+              sleep 5
+            done
+            [ "$(stat -f%z "shots/$scene.png")" -gt 150000 ] || { echo "::error::Capture $scene vide"; exit 1; }
           done
           sips -g pixelWidth -g pixelHeight shots/*.png
       - uses: actions/upload-artifact@v4
