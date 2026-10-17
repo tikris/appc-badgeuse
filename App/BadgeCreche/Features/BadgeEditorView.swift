@@ -3,8 +3,8 @@ import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Création / modification du badge : QR code, nom de l'enfant (facultatif),
-/// nom de la crèche (facultatif) et adresse.
+/// Création / modification du badge : crèche (proposée d'après la position), QR code,
+/// et ce qui s'affiche sur le badge (noms de la crèche et de l'enfant, facultatifs).
 struct BadgeEditorView: View {
     let existing: BadgeData?
     let onSave: (BadgeData) throws -> Void
@@ -15,6 +15,7 @@ struct BadgeEditorView: View {
     @State private var showsChildName: Bool
     @State private var childFirstName: String
     @State private var childLastName: String
+    @State private var showsCrecheName: Bool
     @State private var crecheName: String
     @State private var address: CrecheAddress?
 
@@ -33,8 +34,11 @@ struct BadgeEditorView: View {
         _showsChildName = State(initialValue: initial?.showsChildName ?? false)
         _childFirstName = State(initialValue: initial?.childFirstName ?? "")
         _childLastName = State(initialValue: initial?.childLastName ?? "")
-        _crecheName = State(initialValue: initial?.crecheName ?? "")
-        _address = State(initialValue: initial?.address)
+        let storedName = existing?.crecheName ?? ""
+        _showsCrecheName = State(initialValue: existing == nil || !storedName.isEmpty)
+        _crecheName = State(initialValue: storedName.isEmpty ? (existing?.address.name ?? "") : storedName)
+        // Pour un nouveau badge, la crèche est choisie d'après la position (pas de préremplissage).
+        _address = State(initialValue: existing?.address)
     }
 
     private var canSave: Bool {
@@ -44,17 +48,9 @@ struct BadgeEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
+                CrecheSection(address: $address, onSelect: { crecheName = $0 }, locatesOnAppear: existing == nil)
                 qrSection
-                childSection
-                Section {
-                    TextField("Nom de la crèche (facultatif)", text: $crecheName)
-                        .textInputAutocapitalization(.words)
-                } header: {
-                    Text("Crèche")
-                } footer: {
-                    Text("Affiché sur le badge et sur l'écran verrouillé.")
-                }
-                AddressSection(address: $address)
+                displaySection
             }
             .navigationTitle(existing == nil ? "Nouveau badge" : "Modifier le badge")
             .navigationBarTitleDisplayMode(.inline)
@@ -129,8 +125,13 @@ struct BadgeEditorView: View {
         }
     }
 
-    private var childSection: some View {
+    private var displaySection: some View {
         Section {
+            Toggle("Afficher le nom de la crèche", isOn: $showsCrecheName.animation())
+            if showsCrecheName {
+                TextField("Nom de la crèche", text: $crecheName)
+                    .textInputAutocapitalization(.words)
+            }
             Toggle("Afficher le nom de l'enfant", isOn: $showsChildName.animation())
             if showsChildName {
                 TextField("Prénom", text: $childFirstName)
@@ -141,7 +142,7 @@ struct BadgeEditorView: View {
                     .autocorrectionDisabled()
             }
         } header: {
-            Text("Enfant (facultatif)")
+            Text("Sur le badge (facultatif)")
         } footer: {
             Text("Uniquement si vous le souhaitez. Ces informations restent sur votre iPhone et dans Apple Wallet : elles ne sont jamais transmises à l'APPC.")
         }
@@ -244,7 +245,7 @@ struct BadgeEditorView: View {
             showsChildName: keepsName,
             childFirstName: keepsName ? firstName : "",
             childLastName: keepsName ? lastName : "",
-            crecheName: crecheName.trimmingCharacters(in: .whitespacesAndNewlines),
+            crecheName: showsCrecheName ? crecheName.trimmingCharacters(in: .whitespacesAndNewlines) : "",
             address: address,
             updatedAt: Date()
         )

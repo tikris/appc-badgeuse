@@ -61,7 +61,7 @@ struct AddressSection: View {
         } header: {
             Text("Adresse de la crèche")
         } footer: {
-            Text("Le badge s'affichera sur l'écran verrouillé à l'approche de la crèche (environ 100 m). Recherche effectuée avec Apple Plans.")
+            Text("Recherche effectuée avec Apple Plans.")
         }
     }
 
@@ -101,15 +101,13 @@ struct AddressSection: View {
         let coordinate = item.placemark.coordinate
         let addressLine = item.placemark.title ?? ""
         let name = item.name ?? ""
-        let label: String
-        if name.isEmpty || addressLine.hasPrefix(name) {
-            label = addressLine.isEmpty ? name : addressLine
-        } else if addressLine.isEmpty {
-            label = name
-        } else {
-            label = "\(name), \(addressLine)"
-        }
-        address = CrecheAddress(label: label, latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let isPlace = !name.isEmpty && !addressLine.hasPrefix(name)
+        address = CrecheAddress(
+            label: addressLine.isEmpty ? name : addressLine,
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            name: isPlace ? name : nil
+        )
         results = []
         query = ""
     }
@@ -128,7 +126,7 @@ struct AddressMap: View {
             MapCircle(center: coordinate, radius: 100)
                 .foregroundStyle(Color.appcCoral.opacity(0.2))
                 .stroke(Color.appcCoral, lineWidth: 1)
-            Marker("Crèche", systemImage: "figure.and.child.holdinghands", coordinate: coordinate)
+            Marker(address.name ?? "Crèche", systemImage: "figure.and.child.holdinghands", coordinate: coordinate)
                 .tint(Color.appcCoral)
         }
         .id(address)

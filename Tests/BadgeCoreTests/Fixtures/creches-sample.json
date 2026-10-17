@@ -1,0 +1,7 @@
+{"source":"test","licence":"ODbL","generated":"2026-10-17","creches":[
+{"id":"1","name":"Crèche rue Lauzin","kind":"Crèche","management":"municipale","street":"22 Rue Lauzin","postcode":"75019","lat":48.876233,"lon":2.37835},
+{"id":"2","name":"La Chouine","kind":"Crèche","management":"municipale","street":"8 Square Ornano","postcode":"75018","lat":48.8935,"lon":2.3472},
+{"id":"3","name":"Halte-garderie Aqueduc","kind":"Halte-garderie","management":"associative","street":"55 Rue de l'Aqueduc","postcode":"75010","lat":48.8832881,"lon":2.3655987},
+{"id":"4","name":"Crèche rue Saint-Denis","kind":"Crèche","management":null,"street":"12 Rue Saint-Denis","postcode":"75001","lat":48.8602,"lon":2.3478},
+{"id":"5","name":"Crèche Pérignon","kind":"Crèche","management":"municipale","street":"3 Rue Pérignon","postcode":"75116","lat":48.8479,"lon":2.3071}
+]}

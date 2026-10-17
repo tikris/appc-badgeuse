@@ -5,6 +5,8 @@ struct CrecheAddress: Codable, Hashable {
     var label: String
     var latitude: Double
     var longitude: Double
+    /// Nom de l'établissement (liste des crèches ou Apple Plans), même s'il n'est pas affiché sur le badge.
+    var name: String? = nil
 }
 
 /// Le badge enregistré localement. Version 1 : un seul badge par iPhone.

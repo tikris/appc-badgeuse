@@ -268,6 +268,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Badge Crèche";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSCameraUsageDescription = "L'appareil photo sert uniquement à scanner le QR code remis par votre crèche. Aucune image n'est conservée.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Votre position sert uniquement à vous proposer les crèches les plus proches, directement sur l'iPhone. Elle n'est ni enregistrée ni transmise.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -305,6 +306,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Badge Crèche";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSCameraUsageDescription = "L'appareil photo sert uniquement à scanner le QR code remis par votre crèche. Aucune image n'est conservée.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Votre position sert uniquement à vous proposer les crèches les plus proches, directement sur l'iPhone. Elle n'est ni enregistrée ni transmise.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

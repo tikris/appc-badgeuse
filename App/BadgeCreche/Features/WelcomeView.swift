@@ -23,14 +23,14 @@ struct WelcomeView: View {
 
                 VStack(alignment: .leading, spacing: 18) {
                     step(
+                        symbol: "mappin.and.ellipse",
+                        title: "Choisissez votre crèche",
+                        detail: "Les plus proches vous sont proposées ; toutes les crèches de Paris sont dans la liste."
+                    )
+                    step(
                         symbol: "qrcode.viewfinder",
                         title: "Scannez le QR code de la crèche",
                         detail: "Celui remis en début d'année, ou importez-le depuis une photo ou un PDF."
-                    )
-                    step(
-                        symbol: "mappin.and.ellipse",
-                        title: "Indiquez l'adresse de la crèche",
-                        detail: "Le badge apparaîtra automatiquement à proximité."
                     )
                     step(
                         symbol: "wallet.pass",

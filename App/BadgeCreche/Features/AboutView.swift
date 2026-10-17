@@ -42,7 +42,12 @@ struct AboutView: View {
                     } icon: {
                         Image(systemName: "hand.raised")
                     }
-                    Text("Ce qui relève d'Apple, et non de l'application : la recherche d'adresse interroge Apple Plans, et si vous avez activé la synchronisation iCloud de Wallet, Apple synchronise le badge entre vos appareils (désactivable dans les réglages iCloud).")
+                    Label {
+                        Text("Votre position sert uniquement, au moment de créer le badge, à trier les crèches par distance. Le calcul se fait sur l'iPhone : la position n'est ni enregistrée ni transmise.")
+                    } icon: {
+                        Image(systemName: "location")
+                    }
+                    Text("Ce qui relève d'Apple, et non de l'application : la recherche d'une adresse hors liste interroge Apple Plans, et si vous avez activé la synchronisation iCloud de Wallet, Apple synchronise le badge entre vos appareils (désactivable dans les réglages iCloud).")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     Link("Politique de confidentialité", destination: AppConfig.privacyPolicyURL)
@@ -54,6 +59,7 @@ struct AboutView: View {
                     legalRow("Siège", AppConfig.legalSeat)
                     legalRow("Directeur de la publication", AppConfig.publicationDirector)
                     legalRow("Données personnelles", "Aucune donnée n'est collectée, stockée dans le cloud ni transmise à distance par l'application. Vos données restent sur votre appareil et vous appartiennent entièrement.")
+                    legalRow("Liste des crèches", "Contient des données de l'Apur (Atelier parisien d'urbanisme) sous licence ODbL, avec des adresses de la Base Adresse Nationale (Licence Ouverte).")
                     if !AppConfig.contactEmail.isEmpty, let mail = URL(string: "mailto:\(AppConfig.contactEmail)") {
                         Link(destination: mail) {
                             legalRow("Contact", AppConfig.contactEmail)

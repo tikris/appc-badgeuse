@@ -19,6 +19,9 @@ enum ScreenshotMode {
         #endif
     }()
 
+    /// Position fictive (Paris Centre) utilisée à la place du GPS pendant les captures.
+    static let demoLocation: (latitude: Double, longitude: Double)? = scene == nil ? nil : (48.8640, 2.3430)
+
     static let demoBadge = BadgeData(
         serialNumber: "DEMO",
         qrPayload: "APPC-DEMO-BADGE-0001",

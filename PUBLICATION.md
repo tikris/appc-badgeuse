@@ -58,8 +58,8 @@ Fini le badge de crèche oublié ou introuvable au fond du sac !
 Badge Crèche transforme le QR code remis par votre crèche en début d'année en badge Apple Wallet. À l'approche de la crèche, il s'affiche tout seul sur l'écran verrouillé : il ne reste plus qu'à le présenter à la badgeuse, à l'arrivée comme au départ.
 
 EN TROIS ÉTAPES
+• Choisissez votre crèche : les plus proches vous sont proposées, et toutes les crèches de Paris sont dans la liste.
 • Scannez le QR code de la crèche, ou importez-le depuis une photo, une capture d'écran ou un PDF.
-• Indiquez l'adresse de la crèche.
 • Ajoutez le badge à Apple Wallet.
 
 Le nom de l'enfant et celui de la crèche sont facultatifs : c'est vous qui choisissez ce qui s'affiche.
@@ -83,7 +83,7 @@ crèche,badge,badgeuse,QR code,cartes,wallet,pass,parents,Paris,garde,enfant,poi
 **URL d'assistance** : `https://tikris.github.io/appc-badgeuse/#support`
 **URL de confidentialité** : `https://tikris.github.io/appc-badgeuse/confidentialite.html`
 
-**Confidentialité de l'app (« étiquette »)** : *Données non collectées*.
+**Confidentialité de l'app (« étiquette »)** : *Données non collectées*. La position est utilisée, mais uniquement sur l'appareil (tri des crèches) et jamais transmise : au sens d'Apple, elle n'est pas « collectée ».
 
 **Classification par âge** : répondre « Non » / « Aucun » partout → 4+. Ne pas cocher « Made for Kids » (l'app s'adresse aux parents).
 
@@ -99,9 +99,9 @@ Badge Crèche lets parents store the QR code their nursery gives them for its ch
 
 How to test:
 1. Open https://tikris.github.io/appc-badgeuse/demo-qr.png and save the image to Photos (or display it on another screen and use "Scanner le QR code").
-2. Tap "Créer mon badge", then "Choisir une photo ou une capture d'écran" and pick the image.
-3. Optionally enable "Afficher le nom de l'enfant" and type a first name.
-4. In "Adresse de la crèche", search for "2 rue de Rivoli Paris" and pick a result.
+2. Tap "Créer mon badge". The app asks for your location, only to suggest the 3 nearest nurseries; it is processed on device and never sent anywhere. Outside Paris, or if you decline, tap "Autre crèche" and pick any nursery from the list (search e.g. "Lauzin").
+3. In "QR code de la crèche", tap "Choisir une photo ou une capture d'écran" and pick the image.
+4. Optionally enable "Afficher le nom de l'enfant" and type a first name.
 5. Tap "Enregistrer", then "Add to Apple Wallet".
 
 The app is published free of charge by the non-profit parents' association Parents à Paris Centre (APPC). It is not affiliated with the City of Paris or with nursery operators. The WhatsApp link in "À propos" invites parents to join the association's community.
