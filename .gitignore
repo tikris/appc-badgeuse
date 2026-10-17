@@ -15,3 +15,6 @@ DerivedData/
 
 # Python
 __pycache__/
+
+# Clés API App Store Connect
+*.p8
