@@ -1,52 +1,57 @@
 #!/usr/bin/env python3
-"""Découverte (CI) : sources open data listant les crèches de Paris."""
-import csv
-import io
+"""Découverte (CI) : OpenStreetMap (Overpass), APUR, API Adresse."""
+import collections
 import json
 import urllib.parse
 import urllib.request
 
 
-def get(url, raw=False):
-    request = urllib.request.Request(url, headers={"User-Agent": "appc-badgeuse"})
-    with urllib.request.urlopen(request, timeout=60) as response:
-        return response.read() if raw else json.load(response)
+def fetch(url, data=None):
+    request = urllib.request.Request(url, data=data, headers={"User-Agent": "appc-badgeuse (contact: christophe.amalric@appc.paris)"})
+    with urllib.request.urlopen(request, timeout=180) as response:
+        return response.read()
 
 
-def show(title, value):
-    print(f"\n=== {title}\n{value}")
+QUERY = """
+[out:json][timeout:120];
+area["ref:INSEE"="75056"]["boundary"="administrative"]->.paris;
+(
+  nwr["amenity"="childcare"](area.paris);
+  nwr["amenity"="kindergarten"](area.paris);
+);
+out center tags;
+"""
+try:
+    body = fetch("https://overpass-api.de/api/interpreter", urllib.parse.urlencode({"data": QUERY}).encode())
+    elements = json.loads(body)["elements"]
+    print("OSM éléments :", len(elements))
+    counter = collections.Counter()
+    for element in elements:
+        tags = element.get("tags", {})
+        key = (tags.get("amenity"), tags.get("kindergarten:FR"), tags.get("school:FR"), tags.get("childcare"))
+        counter[key] += 1
+    for key, count in counter.most_common(25):
+        print(" ", count, key)
+    with_address = sum(1 for e in elements if "addr:street" in e.get("tags", {}))
+    with_name = sum(1 for e in elements if "name" in e.get("tags", {}))
+    print("avec nom :", with_name, "avec rue :", with_address)
+    names = collections.Counter(e.get("tags", {}).get("name", "").split(" ")[0].lower() for e in elements)
+    print("premiers mots des noms :", names.most_common(20))
+    for element in elements[:12]:
+        print(json.dumps(element, ensure_ascii=False)[:400])
+except Exception as error:  # noqa: BLE001
+    print("Overpass ERREUR", error)
 
+try:
+    hub = json.loads(fetch("https://opendata.apur.org/api/search/v1/collections/all/items?" + urllib.parse.urlencode({"q": "petite enfance", "limit": 10})))
+    for feature in hub.get("features", []):
+        props = feature.get("properties", {})
+        print("APUR :", props.get("title"), "|", props.get("url") or feature.get("id"))
+except Exception as error:  # noqa: BLE001
+    print("APUR ERREUR", error)
 
-# 1. data.gouv.fr : recherche
-for query in ["crèches paris", "établissements d'accueil du jeune enfant", "EAJE", "accueil petite enfance paris"]:
-    try:
-        data = get("https://www.data.gouv.fr/api/1/datasets/?" + urllib.parse.urlencode({"q": query, "page_size": 8}))
-        show(f"data.gouv.fr « {query} »", "\n".join(
-            f"- {d['slug']} | {d['title']} | {(d.get('organization') or {}).get('name')} | {d.get('license')}"
-            for d in data["data"]))
-    except Exception as error:  # noqa: BLE001
-        show(f"data.gouv.fr « {query} »", f"ERREUR {error}")
-
-# 2. Jeux candidats : ressources + aperçu des CSV
-for slug in ["poi-eaje-3", "etablissements-daccueil-de-la-petite-enfance-pe"]:
-    try:
-        dataset = get(f"https://www.data.gouv.fr/api/1/datasets/{slug}/")
-        show(f"{slug} : {dataset['title']} ({dataset.get('license')}, maj {dataset.get('last_modified')})", "")
-        for resource in dataset["resources"][:6]:
-            print(f"- {resource['title']} | {resource.get('format')} | {resource.get('filesize')} | {resource['url']}")
-        for resource in dataset["resources"][:3]:
-            if (resource.get("format") or "").lower() not in ("csv", "json", "geojson"):
-                continue
-            body = get(resource["url"], raw=True)
-            text = body.decode("utf-8-sig", errors="replace")
-            if resource["format"].lower() == "csv":
-                dialect = csv.Sniffer().sniff(text[:5000], delimiters=";,")
-                rows = list(csv.DictReader(io.StringIO(text), dialect=dialect))
-                paris = [r for r in rows if any(str(v).startswith("75") and len(str(v)) == 5 for v in r.values())]
-                print(f"  {resource['title']} : {len(rows)} lignes, {len(paris)} à Paris ; colonnes : {list(rows[0].keys()) if rows else []}")
-                for row in paris[:3]:
-                    print("  ", json.dumps(row, ensure_ascii=False)[:600])
-            else:
-                print("  ", text[:600])
-    except Exception as error:  # noqa: BLE001
-        show(slug, f"ERREUR {error}")
+try:
+    reverse = json.loads(fetch("https://api-adresse.data.gouv.fr/reverse/?lon=2.3430&lat=48.8640"))
+    print("API Adresse :", reverse["features"][0]["properties"]["label"])
+except Exception as error:  # noqa: BLE001
+    print("API Adresse ERREUR", error)
