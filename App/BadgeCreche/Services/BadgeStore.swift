@@ -12,7 +12,7 @@ final class BadgeStore {
 
     /// À incrémenter quand le contenu du pass change (rayon d'affichage…) : la copie présente
     /// dans Wallet est alors remplacée au lancement suivant, sans action du parent.
-    private static let passRevision = 2
+    private static let passRevision = 3
     private static let passRevisionKey = "passRevision"
 
     private let fileURL: URL

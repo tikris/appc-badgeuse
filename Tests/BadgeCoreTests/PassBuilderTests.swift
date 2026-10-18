@@ -97,7 +97,7 @@ final class PassBuilderTests: XCTestCase {
         let location = try XCTUnwrap((pass["locations"] as? [[String: Any]])?.first)
         XCTAssertEqual(try XCTUnwrap(location["latitude"] as? Double), badge.address.latitude, accuracy: 1e-9)
         XCTAssertEqual(try XCTUnwrap(location["longitude"] as? Double), badge.address.longitude, accuracy: 1e-9)
-        XCTAssertEqual(pass["maxDistance"] as? Int, 20)
+        XCTAssertEqual(pass["maxDistance"] as? Int, 10)
         let generic = try XCTUnwrap(pass["generic"] as? [String: Any])
         let primary = try XCTUnwrap((generic["primaryFields"] as? [[String: Any]])?.first)
         XCTAssertEqual(primary["value"] as? String, "Léa Martin")

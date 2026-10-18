@@ -120,7 +120,7 @@ struct AddressMap: View {
     var body: some View {
         let coordinate = CLLocationCoordinate2D(latitude: address.latitude, longitude: address.longitude)
         Map(
-            initialPosition: .region(MKCoordinateRegion(center: coordinate, latitudinalMeters: 250, longitudinalMeters: 250)),
+            initialPosition: .region(MKCoordinateRegion(center: coordinate, latitudinalMeters: 150, longitudinalMeters: 150)),
             interactionModes: []
         ) {
             MapCircle(center: coordinate, radius: CLLocationDistance(PassBuilder.relevantDistance))
