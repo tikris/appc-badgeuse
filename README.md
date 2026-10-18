@@ -1,2 +1,91 @@
-# appc-badgeuse
+# appc-badgeuse — Badge Crèche
+
 L'APPC met à disposition une badgeuse intégrée à son portefeuille iPhone pour badger à l'arrivée et au départ de la crèche.
+
+**Badge Crèche** transforme le QR code remis par la crèche en début d'année en pass **Apple Wallet**, qui s'affiche tout seul sur l'écran verrouillé devant la crèche (10 m maximum).
+
+- Parcours : l'app demande la position et propose **les 3 crèches les plus proches** ; « Autre crèche » ouvre la liste des **1 066 établissements d'accueil de Paris** (recherche, classement par arrondissement), avec en dernier recours une recherche d'adresse Apple Plans.
+- Champs : crèche (obligatoire, pour l'affichage à proximité), QR code (obligatoire), nom de la crèche et nom de l'enfant affichés sur le badge (facultatifs ; celui de l'enfant est désactivé par défaut).
+- Liste des crèches : construite par `tools/fetch_creches.py` (workflow « Données crèches ») à partir de l'annuaire des lieux de **paris.fr** (noms officiels des crèches municipales, associatives, familiales, parentales, haltes-garderies…), complété par l'[Apur](https://opendata.apur.org) et OpenStreetMap (ODbL) pour les établissements manquants ; adresses et points GPS normalisés avec la Base Adresse Nationale ; embarquée dans l'app (`App/BadgeCreche/Resources/creches-paris.json`, licence ODbL) : aucun appel réseau, la position ne quitte pas l'iPhone.
+- Local : **le QR code, le nom de l'enfant et la position ne quittent jamais l'iPhone**, pas de compte. Le pass est **signé sur l'iPhone** et les données appartiennent entièrement à l'utilisateur (fichier même exclu des sauvegardes iCloud).
+- Statistiques **facultatives, désactivées par défaut** : avec l'accord du parent, la crèche choisie est envoyée une fois au Matomo auto-hébergé de l'APPC (voir **[MATOMO.md](MATOMO.md)**). Sans serveur configuré dans `AppConfig.statsEndpoint`, rien n'est envoyé et l'option n'apparaît pas.
+- Version 1 : un seul badge par iPhone (mis à jour en place dans Wallet).
+- Une initiative de l'association **Parents à Paris Centre (APPC)**, avec un lien vers la [communauté WhatsApp](https://chat.whatsapp.com/CiqGioqeO4yA93wTwvFJMW) dans l'application et au dos du pass.
+
+Publication sur l'App Store : voir **[PUBLICATION.md](PUBLICATION.md)**.
+
+---
+
+## 1. Ouvrir et lancer le projet (≈ 5 min)
+
+Prérequis : Xcode 16 ou plus récent (testé en CI avec Xcode 26.6).
+
+1. Récupérer le code :
+   ```bash
+   git clone https://github.com/tikris/appc-badgeuse.git
+   cd appc-badgeuse
+   open BadgeCreche.xcodeproj
+   ```
+   (ou dans Xcode : *Integrate* → *Clone…* → `https://github.com/tikris/appc-badgeuse.git`).
+2. Dans Xcode : cliquer sur le projet **BadgeCreche** → cible **BadgeCreche** → onglet **Signing & Capabilities** → *Team* : choisir votre équipe Apple Developer.
+   Si Xcode signale que l'identifiant `fr.parentsapariscentre.badgecreche` est déjà pris, le modifier (ex. `fr.appc.badgecreche`).
+3. Choisir un simulateur (ex. *iPhone 17 Pro*) → **⌘R**.
+   L'app se lance et tout l'écran de création fonctionne. Le bouton Wallet affichera « certificat introuvable » tant que l'étape 2 n'est pas faite : c'est normal.
+
+Déjà réglé dans le projet : iOS 17 minimum, iPhone uniquement, icône, autorisation caméra, `ITSAppUsesNonExemptEncryption = NO`, manifeste de confidentialité et capacité Wallet (tous les types de pass de l'équipe).
+
+## 2. Certificat Wallet « Pass Type ID » (≈ 15 min, compte Apple Developer requis)
+
+Apple n'accepte que des pass signés par un certificat émis pour votre équipe.
+
+1. [developer.apple.com](https://developer.apple.com/account/resources/identifiers/list/passTypeId) → *Identifiers* → **+** → *Pass Type IDs* → description `Badge Crèche`, identifiant par ex. `pass.fr.parentsapariscentre.badgecreche`.
+2. Sur le Mac : *Trousseau d'accès* → menu *Trousseau d'accès* → *Assistant de certification* → *Demander un certificat à une autorité de certificat…* → votre e-mail, *Enregistré sur le disque*.
+3. developer.apple.com → *Certificates* → **+** → *Pass Type ID Certificate* → choisir l'identifiant → envoyer la demande (`.certSigningRequest`) → télécharger `pass.cer` → double-cliquer pour l'installer.
+4. *Trousseau d'accès* → *Mes certificats* → « Pass Type ID: pass.… » → clic droit → *Exporter* → format `.p12`, nom **`PassCertificate.p12`**, choisir un mot de passe.
+5. Télécharger le certificat intermédiaire Apple **WWDR G4** : <https://www.apple.com/certificateauthority/AppleWWDRCAG4.cer>.
+6. Copier `tools/PassSigning.example.plist` en **`PassSigning.plist`** et y mettre le mot de passe du `.p12`.
+7. Dans le Finder, déposer `PassCertificate.p12`, `AppleWWDRCAG4.cer` et `PassSigning.plist` dans le dossier **`App/BadgeCreche/`** : ils apparaissent automatiquement dans Xcode et sont intégrés à l'app.
+   ⚠️ Le dépôt est **public** : `*.p12` et `PassSigning.plist` sont ignorés par git, ne les publiez jamais.
+8. Relancer (**⌘R**) : « Ajouter à Apple Wallet » fonctionne, sur le simulateur comme sur l'iPhone.
+
+L'identifiant du type de pass et le Team ID sont **lus directement dans le certificat** : rien d'autre à configurer dans le code.
+
+## 3. Tester
+
+- Sur un iPhone réel (scan caméra) ou sur le simulateur (glisser [`docs/demo-qr.png`](docs/demo-qr.png) sur le simulateur pour l'ajouter à Photos, puis « Choisir une photo »).
+- Pour installer sur votre iPhone : le brancher (ou même Wi-Fi), le choisir comme destination dans Xcode, **⌘R**. La première fois : *Réglages → Confidentialité et sécurité → Mode développeur* à activer sur l'iPhone.
+- Les textes et liens propres à l'APPC sont regroupés dans [`App/BadgeCreche/AppConfig.swift`](App/BadgeCreche/AppConfig.swift). Le numéro RNA y est à reporter dès réception (ainsi que dans `docs/mentions-legales.html`).
+- La première fois, vérifier à la crèche que la badgeuse lit bien le QR code affiché sur l'écran.
+
+## Architecture
+
+```
+BadgeCreche.xcodeproj        projet Xcode (dossier App/BadgeCreche synchronisé : tout fichier ajouté y est inclus)
+App/BadgeCreche/
+  BadgeCrecheApp.swift       point d'entrée
+  ContentView.swift          écran racine
+  AppConfig.swift            textes, liens et mentions légales APPC
+  Core/                      sans UIKit, `nonisolated` (utilisable hors du fil principal), testé sur macOS
+    BadgeData.swift          modèle du badge
+    PassBuilder.swift        pass.json + manifest + signature + archive .pkpass
+    CMSSignature.swift       signature PKCS#7 détachée (RFC 5652)
+    PassSigningIdentity.swift  lecture du .p12, Pass Type ID / Team ID depuis le certificat
+    DER.swift, ZipArchive.swift  encodage ASN.1 et ZIP minimalistes (aucune dépendance)
+    QRCodeReader.swift       lecture du QR code (photo réduite à 2048 px, PDF), testée sur macOS
+  Services/                  stockage local, Wallet, aperçu du QR code et images du pass (mis en cache)
+  Features/                  écrans SwiftUI (accueil, éditeur, adresse, scanner, À propos)
+docs/                        site GitHub Pages : présentation, confidentialité, mentions légales
+Tests/                       tests de signature avec une fausse chaîne de certificats
+```
+
+**Rapidité** : rien de lourd n'est fait au lancement ni sur le fil principal. La liste des crèches (≈ 1 200 fiches) est lue et indexée une seule fois en arrière-plan (`CrecheCatalog`), dès l'écran d'accueil ou à l'ouverture de l'éditeur ; les 3 plus proches sont calculées en un passage, une fois par position. La signature du pass (import du `.p12`, RSA, archive) se fait dans un acteur dédié (`PassSigner`) qui garde l'identité en mémoire.
+
+La CI (GitHub Actions, macOS) compile le projet Xcode (simulateur et iPhone) et vérifie la signature d'un pass généré avec le framework Security d'Apple et avec OpenSSL.
+
+## Limite connue (assumée pour la V1)
+
+Signer sur l'iPhone impose d'embarquer la clé privée du certificat Pass Type ID dans l'application : une personne motivée peut l'extraire et signer des pass au nom de ce Pass Type ID. Les conséquences restent limitées : un pass n'exécute pas de code, et le certificat peut être révoqué puis remplacé. **Évolution recommandée (V2)** : un petit service de signature qui ne reçoit que le `manifest.json` (des empreintes SHA-1, aucune donnée personnelle), protégé par App Attest.
+
+## Licence
+
+GPL v3 — voir [LICENSE](LICENSE).

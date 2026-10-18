@@ -1,0 +1,20 @@
+# Secrets de signature Wallet : ne JAMAIS les publier (dépôt public)
+*.p12
+PassSigning.plist
+*.mobileprovision
+
+# Xcode / SwiftPM
+xcuserdata/
+DerivedData/
+.build/
+.swiftpm/
+*.xcuserstate
+
+
+.DS_Store
+
+# Python
+__pycache__/
+
+# Clés API App Store Connect
+*.p8

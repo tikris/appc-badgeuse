@@ -1,0 +1,94 @@
+name: Captures App Store
+
+# Lance l'app sur un simulateur iPhone 6,9" avec des données fictives
+# (mode `-screenshot`, Debug uniquement), publie les captures brutes en artefact et
+# les dépose dans AppStore/raw/ sur la branche. La mise en forme App Store se fait
+# ensuite avec tools/make_store_screenshots.py.
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "App/**"
+      - ".github/workflows/screenshots.yml"
+
+concurrency:
+  group: screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    name: Captures iPhone 6,9"
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Choix du simulateur
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          candidates = sorted(
+              (runtime, device["name"], device["udid"])
+              for runtime, items in devices.items() if "iOS" in runtime
+              for device in items if device["name"].endswith("Pro Max")
+          )
+          runtime, name, udid = candidates[-1]
+          print(name, runtime, file=sys.stderr)
+          print(udid)
+          ')
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+      - name: Compilation (Debug, simulateur)
+        run: |
+          set -o pipefail
+          xcodebuild build -quiet \
+            -project BadgeCreche.xcodeproj -scheme BadgeCreche -configuration Debug \
+            -destination "id=$UDID" -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO
+          APP="$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/BadgeCreche.app"
+          codesign --force --sign - "$APP"
+          echo "APP=$APP" >> "$GITHUB_ENV"
+      - name: Captures
+        run: |
+          set -euo pipefail
+          BUNDLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist")
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl ui "$UDID" appearance light
+          xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active \
+            --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
+          xcrun simctl install "$UDID" "$APP"
+          mkdir -p shots
+          for scene in badge editor about welcome; do
+            xcrun simctl terminate "$UDID" "$BUNDLE" 2>/dev/null || true
+            xcrun simctl launch "$UDID" "$BUNDLE" -screenshot "$scene" -AppleLanguages "(fr)" -AppleLocale fr_FR
+            case "$scene" in editor) sleep 15 ;; *) sleep 8 ;; esac
+            # Écran encore blanc (app pas encore affichée) : PNG d'environ 90 Ko, on réessaie.
+            for attempt in 1 2 3 4 5 6; do
+              xcrun simctl io "$UDID" screenshot --type=png "shots/$scene.png"
+              [ "$(stat -f%z "shots/$scene.png")" -gt 150000 ] && break
+              echo "$scene : écran encore vide (essai $attempt)"
+              sleep 5
+            done
+            [ "$(stat -f%z "shots/$scene.png")" -gt 150000 ] || { echo "::error::Capture $scene vide"; exit 1; }
+          done
+          sips -g pixelWidth -g pixelHeight shots/*.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: captures-app-store
+          path: shots/*.png
+          retention-days: 7
+      - name: Dépôt des captures brutes sur la branche
+        run: |
+          mkdir -p AppStore/raw && cp shots/*.png AppStore/raw/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AppStore/raw
+          git diff --cached --quiet && exit 0
+          git commit -m "Captures brutes App Store (simulateur, CI)"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"

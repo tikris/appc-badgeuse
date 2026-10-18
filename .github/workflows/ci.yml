@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pass-signing:
+    name: Signature des pass (tests macOS + OpenSSL)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Versions
+        run: xcodebuild -version && swift --version
+      - name: Tests unitaires
+        env:
+          BADGE_TEST_OUTPUT: ${{ runner.temp }}/pass
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee "$RUNNER_TEMP/tests.log"
+          grep -E "Photo 12 Mpx|Executed" "$RUNNER_TEMP/tests.log" | tail -3 || true
+      - name: Vérification indépendante du .pkpass avec OpenSSL
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/pass"
+          OPENSSL="$(brew --prefix openssl@3 2>/dev/null)/bin/openssl"
+          [ -x "$OPENSSL" ] || { brew install openssl@3; OPENSSL="$(brew --prefix openssl@3)/bin/openssl"; }
+          unzip -t "$OUT/badge.pkpass"
+          mkdir -p "$OUT/x" && unzip -o -q "$OUT/badge.pkpass" -d "$OUT/x"
+          cat "$OUT/x/manifest.json"; echo
+          "$OPENSSL" cms -verify -binary -inform DER -in "$OUT/x/signature" -content "$OUT/x/manifest.json" \
+            -CAfile Tests/BadgeCoreTests/Fixtures/test-root.pem -purpose any -out /dev/null
+          "$OPENSSL" cms -cmsout -print -inform DER -in "$OUT/x/signature" | grep -E "contentType|signingTime|messageDigest|algorithm" | head -20
+          cd "$OUT/x" && python3 - <<'EOF'
+          import hashlib, json
+          manifest = json.load(open("manifest.json"))
+          for name, digest in manifest.items():
+              assert hashlib.sha1(open(name, "rb").read()).hexdigest() == digest, name
+          print("manifest OK:", sorted(manifest))
+          EOF
+
+  ios-build:
+    name: Compilation iOS (${{ matrix.name }})
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: projet tel quel
+            isolation: MainActor
+            approachable: "YES"
+          - name: sans isolation MainActor par défaut
+            isolation: nonisolated
+            approachable: "NO"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Compilation simulateur (Debug)
+        run: |
+          set -o pipefail
+          xcodebuild build -quiet \
+            -project BadgeCreche.xcodeproj -scheme BadgeCreche -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            SWIFT_DEFAULT_ACTOR_ISOLATION=${{ matrix.isolation }} \
+            SWIFT_APPROACHABLE_CONCURRENCY=${{ matrix.approachable }}
+      - name: Compilation iPhone (Release, sans signature)
+        if: matrix.isolation == 'MainActor'
+        run: |
+          set -o pipefail
+          xcodebuild build -quiet \
+            -project BadgeCreche.xcodeproj -scheme BadgeCreche -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO
+          APP=$(find ~/Library/Developer/Xcode/DerivedData -path '*Release-iphoneos/BadgeCreche.app' -maxdepth 6 | head -1)
+          ls "$APP"
+          echo "Taille de l'app : $(du -sh "$APP" | cut -f1) (exécutable : $(du -h "$APP/BadgeCreche" | cut -f1))"
+          plutil -p "$APP/Info.plist" | grep -E "CFBundleDisplayName|NSCameraUsageDescription|ITSAppUsesNonExemptEncryption|MinimumOSVersion|CFBundleIcons"
+          test -f "$APP/PrivacyInfo.xcprivacy" && test -f "$APP/Assets.car" && echo "Ressources OK"
