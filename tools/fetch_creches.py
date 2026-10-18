@@ -37,7 +37,12 @@ PARIS_SITEMAP = "https://cdn.paris.fr/paris/sitemaps/parisfr/lieux.xml.gz"
 PARIS_PETITE_ENFANCE = re.compile(
     r"/lieux/(creche|halte|jardin-d-enfant|jardin-maternel|multi-accueil|micro-creche)[a-z0-9-]*-\d+$"
 )
-OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]
+OVERPASS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+]
 DUPLICATE_METERS = 60
 OUTPUT = Path(__file__).resolve().parent.parent / "App" / "BadgeCreche" / "Resources" / "creches-paris.json"
 USER_AGENT = "appc-badgeuse (https://github.com/tikris/appc-badgeuse)"
@@ -266,6 +271,22 @@ def apur_rows():
     return rows
 
 
+def previous_osm_rows(path):
+    """Si aucun serveur Overpass ne répond, reprend les entrées OpenStreetMap de la liste précédente."""
+    try:
+        previous = json.loads(path.read_text(encoding="utf-8"))["creches"]
+    except (OSError, ValueError, KeyError):
+        return []
+    rows = []
+    for c in previous:
+        if c.get("src") == "osm":
+            rows.append({"id": c["id"], "source_name": c["name"], "raw_address": c["street"], "street": c["street"],
+                         "citycode": "", "postcode": c["postcode"], "management": c["management"],
+                         "lat": c["lat"], "lon": c["lon"], "src": "osm"})
+    print("OpenStreetMap indisponible : reprise de", len(rows), "entrées de la liste précédente")
+    return rows
+
+
 def osm_rows():
     query = """[out:json][timeout:180];
     area(3600007444)->.paris;
@@ -274,7 +295,8 @@ def osm_rows():
     elements = None
     for server in OVERPASS:
         try:
-            elements = json.loads(request(server, data=urllib.parse.urlencode({"data": query}).encode()))["elements"]
+            elements = json.loads(request(server, data=urllib.parse.urlencode({"data": query}).encode(), attempts=2))["elements"]
+            print("Overpass :", server)
             break
         except Exception as error:  # noqa: BLE001
             print("Overpass indisponible :", server, error)
@@ -357,6 +379,9 @@ def main():
         print("Apur indisponible :", error)
         apur = []
     osm = osm_rows()
+    osm_from_previous = not osm
+    if osm_from_previous:
+        osm = previous_osm_rows(output)
 
     # Adresses normalisées et coordonnées du point d'adresse (BAN) pour paris.fr et l'Apur.
     try:
@@ -379,7 +404,7 @@ def main():
 
     # OpenStreetMap : adresse des tags, sinon géocodage inverse.
     try:
-        reversed_ = reverse_addresses([r for r in osm if not (r["raw_address"] and r["postcode"])])
+        reversed_ = {} if osm_from_previous else reverse_addresses([r for r in osm if not (r["raw_address"] and r["postcode"])])
     except Exception as error:  # noqa: BLE001
         print("BAN (inverse) indisponible :", error)
         reversed_ = {}
