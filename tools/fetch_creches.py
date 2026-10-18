@@ -1,27 +1,44 @@
 #!/usr/bin/env python3
 """Construit la liste des crèches de Paris embarquée dans l'application.
 
-Source : Apur (Atelier parisien d'urbanisme), couche open data « Équipements ponctuels –
-Petite enfance ». Les adresses sont normalisées (accents, libellés) avec l'API Adresse
-de l'État (BAN). Exécuté par le workflow « Données crèches » (accès réseau requis).
+Sources, par ordre de priorité (un établissement à moins de 60 m d'un autre déjà retenu est
+considéré comme un doublon) :
+1. Ville de Paris : annuaire des lieux de paris.fr (crèches municipales, associatives,
+   familiales, parentales, haltes-garderies, jardins d'enfants…), avec les noms officiels ;
+2. Apur, couche open data « Équipements ponctuels – Petite enfance » (ODbL) ;
+3. OpenStreetMap (ODbL), surtout pour les crèches privées et micro-crèches.
+Les adresses sont normalisées avec l'API Adresse de l'État (BAN).
+Exécuté par le workflow « Données crèches » (accès réseau requis).
 
 Usage : python3 tools/fetch_creches.py [fichier de sortie]
 """
 import csv
 import datetime
+import gzip
+import html
 import io
 import json
+import math
 import re
 import sys
+import time
 import unicodedata
 import urllib.parse
 import urllib.request
 import uuid
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 LAYER = "https://carto2.apur.org/apur/rest/services/OPENDATA/EQUIPEMENT_PONCTUEL/MapServer/2"
 BAN_CSV = "https://api-adresse.data.gouv.fr/search/csv/"
+BAN_REVERSE_CSV = "https://api-adresse.data.gouv.fr/reverse/csv/"
+PARIS_SITEMAP = "https://cdn.paris.fr/paris/sitemaps/parisfr/lieux.xml.gz"
+PARIS_PETITE_ENFANCE = re.compile(
+    r"/lieux/(creche|halte|jardin-d-enfant|jardin-maternel|multi-accueil|micro-creche)[a-z0-9-]*-\d+$"
+)
+OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]
+DUPLICATE_METERS = 60
 OUTPUT = Path(__file__).resolve().parent.parent / "App" / "BadgeCreche" / "Resources" / "creches-paris.json"
 USER_AGENT = "appc-badgeuse (https://github.com/tikris/appc-badgeuse)"
 
@@ -43,10 +60,16 @@ GENERIC_WORDS = {
 MANAGEMENT = {"M": "municipale", "A": "associative", "D": "départementale"}
 
 
-def request(url, data=None, headers=None):
-    req = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT, **(headers or {})})
-    with urllib.request.urlopen(req, timeout=180) as response:
-        return response.read()
+def request(url, data=None, headers=None, attempts=3):
+    for attempt in range(attempts):
+        try:
+            req = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT, **(headers or {})})
+            with urllib.request.urlopen(req, timeout=180) as response:
+                return response.read()
+        except Exception:  # noqa: BLE001
+            if attempt == attempts - 1:
+                raise
+            time.sleep(2 * (attempt + 1))
 
 
 def fold(text):
@@ -87,12 +110,57 @@ def kind_of(name):
 
 
 def is_generic(name):
+    if re.search(r"etage|^\W*\d", fold(name)):
+        return True
     words = [w for w in re.split(r"[\s']+", fold(name)) if w]
     return all(w in GENERIC_WORDS or w == "d" for w in words)
 
 
+def management_of(text):
+    t = fold(text)
+    if "municipal" in t or "ville de paris" in t or "mairie de paris" in t:
+        return "municipale"
+    if "associati" in t or "parental" in t:
+        return "associative"
+    return None
+
+
+def distance(a, b):
+    p = math.pi / 180
+    h = (math.sin((b["lat"] - a["lat"]) * p / 2) ** 2
+         + math.cos(a["lat"] * p) * math.cos(b["lat"] * p) * math.sin((b["lon"] - a["lon"]) * p / 2) ** 2)
+    return 2 * 6371000 * math.asin(math.sqrt(h))
+
+
+def multipart(fields, csv_text):
+    boundary = uuid.uuid4().hex
+    body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"data\"; filename=\"data.csv\"\r\n"
+            f"Content-Type: text/csv\r\n\r\n{csv_text}\r\n")
+    for name, value in fields:
+        body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n"
+    body += f"--{boundary}--\r\n"
+    return body.encode(), {"Content-Type": f"multipart/form-data; boundary={boundary}"}
+
+
+def reverse_addresses(rows):
+    """Géocodage inverse par lot (BAN) : {id: (numéro + voie, code postal)}."""
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["id", "lat", "lon"])
+    for row in rows:
+        writer.writerow([row["id"], row["lat"], row["lon"]])
+    body, headers = multipart([], buffer.getvalue())
+    response = request(BAN_REVERSE_CSV, data=body, headers=headers)
+    result = {}
+    for line in csv.DictReader(io.StringIO(response.decode("utf-8-sig"))):
+        if line.get("result_type") == "housenumber" and line.get("result_postcode", "").startswith("75"):
+            street = f"{line['result_housenumber']} {line.get('result_street') or line.get('result_name', '')}".strip()
+            result[line["id"]] = (street, line["result_postcode"])
+    return result
+
+
 def normalize_addresses(rows):
-    """Géocodage par lot (BAN) : renvoie {id: (numéro + voie, code postal)} pour les bons scores."""
+    """Géocodage par lot (BAN) : {id: (numéro + voie, code postal, lat, lon)} pour les bons scores."""
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(["id", "adresse", "citycode"])
@@ -113,20 +181,66 @@ def normalize_addresses(rows):
             score = float(line.get("result_score") or 0)
         except ValueError:
             score = 0
-        if score >= 0.7 and line.get("result_type") == "housenumber":
+        if score >= 0.6 and line.get("result_type") == "housenumber":
             result[line["id"]] = (f"{line['result_housenumber']} {line['result_street'] or line['result_name']}".strip()
-                                  if line.get("result_street") else line["result_name"], line["result_postcode"])
+                                  if line.get("result_street") else line["result_name"], line["result_postcode"],
+                                  float(line["latitude"]), float(line["longitude"]))
     return result
 
 
-def main():
-    output = Path(sys.argv[1]) if len(sys.argv) > 1 else OUTPUT
+def paris_fr_rows():
+    """Annuaire des lieux de paris.fr : nom officiel, adresse et coordonnées de chaque établissement."""
+    xml = request(PARIS_SITEMAP)
+    try:
+        xml = gzip.decompress(xml)
+    except OSError:
+        pass
+    urls = sorted({u for u in re.findall(r"<loc>(.*?)</loc>", xml.decode("utf-8", "replace"))
+                   if PARIS_PETITE_ENFANCE.search(u)})
+    print("paris.fr : lieux petite enfance dans le plan du site :", len(urls))
+
+    def parse(url):
+        try:
+            page = request(url).decode("utf-8", "replace")
+        except Exception as error:  # noqa: BLE001
+            print("  page illisible :", url, error)
+            return None
+        title = re.search(r'property="og:title" content="([^"]*)"', page)
+        block = re.search(r'<div class="sidebar-section-content">(.*?)</div>', page, re.S)
+        coords = re.search(r"[?&;]c=([0-9.]+),([0-9.]+)", page)
+        if not title or not block:
+            print("  page sans nom ni adresse :", url)
+            return None
+        name = html.unescape(title.group(1)).strip()
+        text = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", block.group(1)))).strip()
+        address = text[len(name):] if text.startswith(name) else text
+        address = address.strip(" ,")
+        arrondissement = re.search(r"Paris\s*(\d{1,2})\s*(?:er|e|ème)\b", address)
+        street = re.sub(r",?\s*Paris\s*\d{1,2}\s*(?:er|e|ème)\b.*$", "", address).strip(" ,")
+        number = int(arrondissement.group(1)) if arrondissement else 0
+        return {
+            "id": "pf-" + url.rsplit("-", 1)[1],
+            "source_name": name,
+            "raw_address": street,
+            "citycode": str(75100 + number) if 1 <= number <= 20 else "",
+            "postcode": f"750{number:02d}" if 1 <= number <= 20 else "",
+            "management": management_of(name + " " + url),
+            "lat": round(float(coords.group(2)), 6) if coords else None,
+            "lon": round(float(coords.group(1)), 6) if coords else None,
+            "src": "paris.fr",
+        }
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        rows = [row for row in pool.map(parse, urls) if row and row["raw_address"]]
+    print("paris.fr : établissements lus :", len(rows), "| sans coordonnées :", sum(r["lat"] is None for r in rows))
+    return rows
+
+
+def apur_rows():
     params = {"where": "c_cainsee >= 75101 AND c_cainsee <= 75120", "outFields": "*", "outSR": "4326",
               "f": "geojson", "resultRecordCount": 3000}
     features = json.loads(request(LAYER + "/query?" + urllib.parse.urlencode(params)))["features"]
-    print("Établissements reçus (Paris) :", len(features))
-    print("Nomenclature :", Counter((f["properties"]["c_niv3"], kind_of(f["properties"]["l_ep_min"] or "")) for f in features))
-
+    print("Apur : établissements reçus :", len(features))
     rows = []
     for feature in features:
         p = feature["properties"]
@@ -135,7 +249,7 @@ def main():
             continue
         lon, lat = feature["geometry"]["coordinates"]
         rows.append({
-            "id": str(p["n_sq_ep"]),
+            "id": "apur-" + str(p["n_sq_ep"]),
             "source_name": name,
             "raw_address": raw_street(p),
             "citycode": str(p["c_cainsee"]),
@@ -143,18 +257,130 @@ def main():
             "management": MANAGEMENT.get(str(p.get("c_gestion") or "").strip().upper()),
             "lat": round(lat, 6),
             "lon": round(lon, 6),
+            "src": "apur",
         })
+    return rows
 
+
+def osm_rows():
+    query = """[out:json][timeout:180];
+    area(3600007444)->.paris;
+    nwr["amenity"~"^(kindergarten|childcare)$"]["name"](area.paris);
+    out tags center;"""
+    elements = None
+    for server in OVERPASS:
+        try:
+            elements = json.loads(request(server, data=urllib.parse.urlencode({"data": query}).encode()))["elements"]
+            break
+        except Exception as error:  # noqa: BLE001
+            print("Overpass indisponible :", server, error)
+    if elements is None:
+        return []
+    looks_like_creche = re.compile(r"cr[eè]che|creche|halte|multi.?accueil|micro|jardin d.enfants|babilou|people.?&?.?baby"
+                                   r"|chaperons|maison bleue|cr[eé]chendo|evancia|grandir|tom ?pouce")
+    excluded = re.compile(r"maternelle|ecole|elementaire|loisirs|periscolaire|ludotheque|assistante|\bmam\b|\bram\b|relais")
+    rows = []
+    for e in elements:
+        tags = e.get("tags", {})
+        name = tags["name"].strip()
+        folded = fold(name)
+        kind_fr = tags.get("kindergarten:FR", "")
+        if excluded.search(folded) and not looks_like_creche.search(folded):
+            continue
+        if not (tags["amenity"] == "childcare" or "crèche" in kind_fr or "halte" in kind_fr or looks_like_creche.search(folded)):
+            continue
+        lat = e.get("lat") or (e.get("center") or {}).get("lat")
+        lon = e.get("lon") or (e.get("center") or {}).get("lon")
+        if lat is None:
+            continue
+        number, street = tags.get("addr:housenumber"), tags.get("addr:street")
+        operator = " ".join(tags.get(k, "") for k in ("operator", "brand", "operator:type"))
+        management = management_of(operator)
+        if management is None and (tags.get("brand") or "private" in tags.get("operator:type", "")):
+            management = "privée"
+        rows.append({
+            "id": f"osm-{e['type'][0]}{e['id']}",
+            "source_name": name,
+            "raw_address": f"{number} {street}" if number and street else "",
+            "citycode": "",
+            "postcode": tags.get("addr:postcode", ""),
+            "management": management,
+            "lat": round(lat, 6),
+            "lon": round(lon, 6),
+            "src": "osm",
+        })
+    print("OpenStreetMap : établissements retenus :", len(rows), "sur", len(elements))
+    return rows
+
+
+def significant_words(name):
+    return {w for w in re.split(r"[^a-z0-9]+", fold(name)) if len(w) > 2 and w not in GENERIC_WORDS}
+
+
+def merge(sources):
+    """Garde la première source pour chaque établissement : les suivantes ne complètent que les manques."""
+    kept = []
+    for label, rows in sources:
+        previous = list(kept)  # pas de dédoublonnage à l'intérieur d'une même source
+        added = 0
+        for row in rows:
+            if row["lat"] is None:
+                continue
+            row["words"] = significant_words(row["source_name"])
+            duplicate = any(
+                (d := distance(row, other)) < DUPLICATE_METERS or (d < 150 and row["words"] & other["words"])
+                for other in previous
+            )
+            if not duplicate:
+                kept.append(row)
+                added += 1
+        print(f"Fusion : {label} apporte {added} établissement(s) sur {len(rows)}")
+    return kept
+
+
+def main():
+    output = Path(sys.argv[1]) if len(sys.argv) > 1 else OUTPUT
+    paris = paris_fr_rows()
+    # Les coordonnées manquantes de paris.fr sont prises dans la BAN.
     try:
-        normalized = normalize_addresses(rows)
+        geocoded = normalize_addresses([r for r in paris if r["citycode"]])
+    except Exception as error:  # noqa: BLE001
+        print("BAN indisponible pour paris.fr :", error)
+        geocoded = {}
+    for row in paris:
+        if row["lat"] is None and row["id"] in geocoded:
+            row["lat"], row["lon"] = geocoded[row["id"]][2], geocoded[row["id"]][3]
+    try:
+        apur = apur_rows()
+    except Exception as error:  # noqa: BLE001
+        print("Apur indisponible :", error)
+        apur = []
+    osm = osm_rows()
+    rows = merge([("paris.fr", paris), ("Apur", apur), ("OpenStreetMap", osm)])
+
+    to_geocode = [r for r in rows if r["raw_address"] and r["citycode"]]
+    try:
+        normalized = {**geocoded, **normalize_addresses([r for r in to_geocode if r["src"] != "paris.fr"])}
     except Exception as error:  # noqa: BLE001
         print("BAN indisponible, adresses brutes conservées :", error)
-        normalized = {}
-    print(f"Adresses normalisées par la BAN : {len(normalized)}/{len(rows)}")
+        normalized = geocoded
+    try:
+        reversed_ = reverse_addresses([r for r in rows if not r["raw_address"] or not r["citycode"]])
+    except Exception as error:  # noqa: BLE001
+        print("BAN (inverse) indisponible :", error)
+        reversed_ = {}
+    print(f"Adresses normalisées par la BAN : {len(normalized)} ; retrouvées par géocodage inverse : {len(reversed_)}")
 
     creches = []
     for row in rows:
-        street, postcode = normalized.get(row["id"], (row["raw_address"], row["postcode"]))
+        if row["id"] in normalized:
+            street, postcode = normalized[row["id"]][:2]
+        elif row["id"] in reversed_ and not (row["raw_address"] and row["postcode"]):
+            street, postcode = reversed_[row["id"]]
+        else:
+            street, postcode = row["raw_address"], row["postcode"]
+        if not street or not postcode.startswith("75"):
+            continue
         kind = kind_of(row["source_name"])
         name = row["source_name"]
         if is_generic(name):
@@ -162,24 +388,27 @@ def main():
             name = f"{kind} {street_name[:1].lower()}{street_name[1:]}" if street_name else kind
         creches.append({
             "id": row["id"], "name": name, "kind": kind, "management": row["management"],
-            "street": street, "postcode": postcode or row["postcode"], "lat": row["lat"], "lon": row["lon"],
+            "street": street, "postcode": postcode, "lat": row["lat"], "lon": row["lon"], "src": row["src"],
         })
     creches.sort(key=lambda c: (c["postcode"], fold(c["name"])))
 
     document = {
-        "source": "Apur – Équipements ponctuels « Petite enfance » (opendata.apur.org), adresses normalisées avec l'API Adresse (BAN)",
-        "licence": "ODbL (Open Database License) pour les données Apur ; adresses : Base Adresse Nationale, Licence Ouverte",
+        "source": "Ville de Paris (annuaire des lieux de paris.fr), Apur (« Équipements ponctuels – Petite enfance »), "
+                  "OpenStreetMap ; adresses normalisées avec l'API Adresse (BAN)",
+        "licence": "ODbL (Open Database License) : données Apur et © contributeurs OpenStreetMap ; "
+                   "informations publiques de la Ville de Paris ; adresses : Base Adresse Nationale, Licence Ouverte",
         "generated": datetime.date.today().isoformat(),
         "creches": creches,
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(document, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print(f"{len(creches)} crèches écrites dans {output} ({output.stat().st_size // 1024} Ko)")
-    print("Licence :", document["licence"])
+    print(f"{len(creches)} établissements écrits dans {output} ({output.stat().st_size // 1024} Ko)")
+    print("Sources :", Counter(c["src"] for c in creches))
     print("Types :", Counter(c["kind"] for c in creches))
     print("Gestion :", Counter(c["management"] for c in creches))
+    print("Contrôle « Grange aux Belles » :", [c for c in creches if "grange aux belles" in fold(c["name"] + " " + c["street"]).replace("-", " ")])
     print("Exemples :")
-    for creche in creches[::max(1, len(creches) // 12)]:
+    for creche in creches[::max(1, len(creches) // 15)]:
         print("  ", json.dumps(creche, ensure_ascii=False))
 
 
