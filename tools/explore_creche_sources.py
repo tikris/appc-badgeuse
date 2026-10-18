@@ -33,24 +33,29 @@ def section(title, function):
 
 def paris_data():
     seen = {}
-    for term in ["creche", "petite enfance", "accueil du jeune enfant", "eaje", "halte-garderie", "multi-accueil"]:
-        where = urllib.parse.quote(f'search("{term}")')
+    for term in ["creche", "crèches", "petite enfance", "accueil du jeune enfant", "equipements", "lieux", "etablissements"]:
+        where = urllib.parse.quote(f'"{term}"')
         url = ("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets?limit=50"
                f"&where={where}&select=dataset_id,metas")
-        for item in json.loads(get(url)).get("results", []):
+        try:
+            results = json.loads(get(url)).get("results", [])
+        except Exception as error:  # noqa: BLE001
+            print(f"[{term}] erreur : {error!r}")
+            continue
+        for item in results:
             metas = item.get("metas", {}).get("default", {})
             seen[item["dataset_id"]] = (metas.get("title"), metas.get("records_count"), metas.get("modified"))
     for dataset_id, (title, count, modified) in sorted(seen.items()):
         print(f"{dataset_id} | {title} | {count} lignes | {modified}")
     for dataset_id in seen:
-        url = (f"https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/{dataset_id}/records?limit=5"
-               f"&where={urllib.parse.quote('search(\"grange aux belles\")')}")
+        url = (f"https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/{dataset_id}/records?limit=3"
+               f"&where={urllib.parse.quote(chr(34) + 'grange aux belles' + chr(34))}")
         try:
             hits = json.loads(get(url)).get("results", [])
         except Exception:  # noqa: BLE001
             continue
         if hits:
-            print(f"-> « grange aux belles » trouvé dans {dataset_id} : {json.dumps(hits[0], ensure_ascii=False)[:600]}")
+            print(f"-> « grange aux belles » dans {dataset_id} : {json.dumps(hits[0], ensure_ascii=False)[:700]}")
 
 
 def data_gouv():
@@ -84,11 +89,19 @@ def overpass():
 
 def paris_fr():
     html = get("https://www.paris.fr/lieux/creche-municipale-grange-aux-belles-hopital-saint-louis-19903")
-    print("Taille :", len(html))
-    for match in re.findall(r'<script type="application/ld\+json">(.*?)</script>', html, re.S)[:3]:
-        print("JSON-LD :", match.strip()[:800])
-    print("Liens API :", sorted(set(re.findall(r'https?://[^"\']*api[^"\']*', html)))[:20])
-    print("Liens data :", sorted(set(re.findall(r'https?://[^"\']*(?:opendata|data\.)[^"\']*', html)))[:20])
+    title = re.search(r"<title>(.*?)</title>", html, re.S)
+    print("Titre :", title.group(1).strip() if title else None)
+    for needle in ["latitude", "longitude", "lat", "lng", "GeoCoordinates", "streetAddress", "postalCode", "data-address", "75010"]:
+        for match in list(re.finditer(needle, html))[:2]:
+            print(f"[{needle}]", html[max(0, match.start() - 120):match.end() + 160].replace("\n", " "))
+    links = sorted(set(re.findall(r'href="(/[^"]*lieux[^"]*)"', html)))
+    print("Liens /lieux :", links[:30])
+    for sitemap in ["https://www.paris.fr/sitemap.xml", "https://www.paris.fr/robots.txt"]:
+        try:
+            text = get(sitemap)
+            print(sitemap, len(text), text[:1500])
+        except Exception as error:  # noqa: BLE001
+            print(sitemap, "erreur", repr(error))
 
 
 def apur():
@@ -104,7 +117,10 @@ def apur():
     print("c_niv3 :", Counter(f["attributes"].get("c_niv3") for f in features).most_common())
     print("c_gestion :", Counter(f["attributes"].get("c_gestion") for f in features).most_common())
     for f in features:
-        if "grange" in fold(" ".join(str(v) for v in f["attributes"].values())):
+        blob = fold(" ".join(str(v) for v in f["attributes"].values()))
+        if "vellefaux" in blob or "saint louis" in blob or "grange-aux" in blob:
+            print("-> VELLEFAUX / SAINT-LOUIS :", json.dumps(f["attributes"], ensure_ascii=False)[:500])
+        if "grange" in blob:
             print("-> GRANGE :", json.dumps(f["attributes"], ensure_ascii=False)[:600])
     print("Exemple de champs :", json.dumps(features[0]["attributes"], ensure_ascii=False)[:800])
 
