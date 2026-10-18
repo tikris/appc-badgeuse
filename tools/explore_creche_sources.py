@@ -86,36 +86,53 @@ def overpass():
         print("   ", json.dumps(e["tags"], ensure_ascii=False)[:250])
 
 
-def paris_fr():
+def strip_tags(html):
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html)).strip()
+
+
+def gunzip_get(url):
     import gzip
-    html = get("https://www.paris.fr/lieux/creche-municipale-grange-aux-belles-hopital-saint-louis-19903")
-    print("Chemins /api relatifs :", sorted(set(re.findall(r'["\'](/api/[^"\']+)', html)))[:20])
-    for key in ["address", "adresse", "zipcode", "zip_code", "postal", "geo", "coordinates", "Grange"]:
-        for match in list(re.finditer(key, html))[:2]:
-            print(f"[{key}]", html[max(0, match.start() - 150):match.end() + 200].replace("\n", " "))
-    index = get("https://www.paris.fr/lieux/creches-municipales/tous-les-horaires")
-    links = sorted(set(re.findall(r'href="(/lieux/[a-z0-9-]+-\d+)"', index)))
-    print("Index « tous les horaires » :", len(index), "octets,", len(links), "liens de lieux")
-    print("   ", links[:10])
-    for match in list(re.finditer("grange", index, re.I))[:2]:
-        print("[index grange]", index[max(0, match.start() - 300):match.end() + 300].replace("\n", " "))
-    req = urllib.request.Request("https://www.paris.fr/sitemap.xml.gz", headers={"User-Agent": USER_AGENT})
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     raw = urllib.request.urlopen(req, timeout=120).read()
     try:
         raw = gzip.decompress(raw)
     except OSError:
         pass
-    xml = raw.decode("utf-8", "replace")
-    locs = re.findall(r"<loc>(.*?)</loc>", xml)
-    print("Sitemap :", len(locs), "URL ; exemples :", locs[:5])
-    lieux = [u for u in locs if "/lieux/" in u]
+    return raw.decode("utf-8", "replace")
+
+
+def paris_fr():
     from collections import Counter
-    kinds = Counter(re.sub(r"-.*", "", u.split("/lieux/")[1]) for u in lieux)
-    print("Lieux :", len(lieux), kinds.most_common(25))
-    petite = [u for u in lieux if re.search(r"/lieux/(creche|halte|jardin-d|multi|micro|etablissement-d-accueil)", u)]
+    index = gunzip_get("https://www.paris.fr/sitemap.xml.gz")
+    sitemaps = re.findall(r"<loc>(.*?)</loc>", index)
+    print("Sitemaps :", sitemaps)
+    lieux = []
+    for sitemap in sitemaps:
+        locs = re.findall(r"<loc>(.*?)</loc>", gunzip_get(sitemap))
+        here = [u for u in locs if "/lieux/" in u]
+        print(f"  {sitemap} : {len(locs)} URL dont {len(here)} lieux")
+        lieux += here
+    slugs = [u.split("/lieux/")[1] for u in lieux]
+    prefixes = Counter("-".join(slug.split("-")[:2]) for slug in slugs)
+    print("Préfixes de lieux :", prefixes.most_common(60))
+    petite = [u for u in lieux if re.search(r"/lieux/(creche|halte|jardin-d-enfant|jardin-maternel|multi-accueil|micro-creche|etablissement-multi|eaje)", u)]
     print("Lieux petite enfance :", len(petite))
-    print(Counter(re.match(r".*/lieux/((?:[a-z]+-){1,2})", u).group(1) for u in petite).most_common(20))
+    print(Counter("-".join(u.split("/lieux/")[1].split("-")[:2]) for u in petite).most_common(30))
     print([u for u in petite if "grange" in u])
+    samples = [u for u in petite if "grange-aux-belles" in u][:1]
+    samples += [u for u in petite if "/creche-associative" in u][:1]
+    samples += [u for u in petite if "/halte" in u][:1]
+    samples += [u for u in petite if "/jardin" in u][:1]
+    for url in samples:
+        html = get(url)
+        title = re.search(r'property="og:title" content="([^"]*)"', html)
+        print("\n---", url, "|", title.group(1) if title else None)
+        for block in re.findall(r'<div class="sidebar-section-content">(.*?)</div>', html, re.S)[:6]:
+            print("   [sidebar]", strip_tags(block)[:300])
+        coords = re.search(r"[?&;]c=([0-9.]+),([0-9.]+)", html)
+        print("   coords :", coords.groups() if coords else None)
+        for match in list(re.finditer(r"750\d\d", html))[:3]:
+            print("   [750xx]", strip_tags(html[max(0, match.start() - 250):match.end() + 80]))
 
 
 def apur():
@@ -140,5 +157,4 @@ def apur():
 
 
 if __name__ == "__main__":
-    section("Paris Data (opendata.paris.fr)", paris_data)
     section("paris.fr (fiche Grange aux Belles)", paris_fr)
