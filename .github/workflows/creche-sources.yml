@@ -1,0 +1,17 @@
+name: Sources crèches (exploration)
+
+# Exploration ponctuelle des sources ouvertes de crèches (résultats dans les journaux).
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "tools/explore_creche_sources.py"
+      - ".github/workflows/creche-sources.yml"
+
+jobs:
+  explore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/explore_creche_sources.py
