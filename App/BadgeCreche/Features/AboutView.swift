@@ -74,7 +74,7 @@ struct AboutView: View {
                     legalRow("Siège", AppConfig.legalSeat)
                     legalRow("Directeur de la publication", AppConfig.publicationDirector)
                     legalRow("Données personnelles", personalDataNotice)
-                    legalRow("Liste des crèches", "Contient des données de l'Apur (Atelier parisien d'urbanisme) sous licence ODbL, avec des adresses de la Base Adresse Nationale (Licence Ouverte).")
+                    legalRow("Liste des crèches", "Établissements issus de l'annuaire de la Ville de Paris (paris.fr), de l'Apur (Atelier parisien d'urbanisme, licence ODbL) et d'OpenStreetMap (© contributeurs OpenStreetMap, licence ODbL), avec des adresses de la Base Adresse Nationale (Licence Ouverte).")
                     if !AppConfig.contactEmail.isEmpty, let mail = URL(string: "mailto:\(AppConfig.contactEmail)") {
                         Link(destination: mail) {
                             legalRow("Contact", AppConfig.contactEmail)

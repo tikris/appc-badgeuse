@@ -225,14 +225,18 @@ def paris_fr_rows():
             "citycode": str(75100 + number) if 1 <= number <= 20 else "",
             "postcode": f"750{number:02d}" if 1 <= number <= 20 else "",
             "management": management_of(name + " " + url),
-            "lat": round(float(coords.group(2)), 6) if coords else None,
-            "lon": round(float(coords.group(1)), 6) if coords else None,
+            # Coordonnées de la page : itinéraire GéoVélo, souvent décalé de 100 à 200 m de l'adresse.
+            # Gardées seulement en secours si la BAN ne trouve pas l'adresse.
+            "page_lat": round(float(coords.group(2)), 6) if coords else None,
+            "page_lon": round(float(coords.group(1)), 6) if coords else None,
+            "lat": None,
+            "lon": None,
             "src": "paris.fr",
         }
 
     with ThreadPoolExecutor(max_workers=6) as pool:
         rows = [row for row in pool.map(parse, urls) if row and row["raw_address"]]
-    print("paris.fr : établissements lus :", len(rows), "| sans coordonnées :", sum(r["lat"] is None for r in rows))
+    print("paris.fr : établissements lus :", len(rows))
     return rows
 
 
@@ -318,7 +322,8 @@ def significant_words(name):
 
 
 def merge(sources):
-    """Garde la première source pour chaque établissement : les suivantes ne complètent que les manques."""
+    """Garde la première source pour chaque établissement : les suivantes ne complètent que les manques
+    (doublon : même adresse, moins de 60 m, ou moins de 150 m avec un nom en commun)."""
     kept = []
     for label, rows in sources:
         previous = list(kept)  # pas de dédoublonnage à l'intérieur d'une même source
@@ -327,8 +332,11 @@ def merge(sources):
             if row["lat"] is None:
                 continue
             row["words"] = significant_words(row["source_name"])
+            row["address_key"] = (fold(row["street"]).replace("-", " "), row["postcode"])
             duplicate = any(
-                (d := distance(row, other)) < DUPLICATE_METERS or (d < 150 and row["words"] & other["words"])
+                row["address_key"] == other["address_key"]
+                or (d := distance(row, other)) < DUPLICATE_METERS
+                or (d < 150 and row["words"] & other["words"])
                 for other in previous
             )
             if not duplicate:
@@ -341,44 +349,52 @@ def merge(sources):
 def main():
     output = Path(sys.argv[1]) if len(sys.argv) > 1 else OUTPUT
     paris = paris_fr_rows()
-    # Les coordonnées manquantes de paris.fr sont prises dans la BAN.
-    try:
-        geocoded = normalize_addresses([r for r in paris if r["citycode"]])
-    except Exception as error:  # noqa: BLE001
-        print("BAN indisponible pour paris.fr :", error)
-        geocoded = {}
-    for row in paris:
-        if row["lat"] is None and row["id"] in geocoded:
-            row["lat"], row["lon"] = geocoded[row["id"]][2], geocoded[row["id"]][3]
     try:
         apur = apur_rows()
     except Exception as error:  # noqa: BLE001
         print("Apur indisponible :", error)
         apur = []
     osm = osm_rows()
-    rows = merge([("paris.fr", paris), ("Apur", apur), ("OpenStreetMap", osm)])
 
-    to_geocode = [r for r in rows if r["raw_address"] and r["citycode"]]
+    # Adresses normalisées et coordonnées du point d'adresse (BAN) pour paris.fr et l'Apur.
     try:
-        normalized = {**geocoded, **normalize_addresses([r for r in to_geocode if r["src"] != "paris.fr"])}
+        normalized = normalize_addresses([r for r in paris + apur if r["raw_address"] and r["citycode"]])
     except Exception as error:  # noqa: BLE001
         print("BAN indisponible, adresses brutes conservées :", error)
-        normalized = geocoded
+        normalized = {}
+    fallback = 0
+    for row in paris + apur:
+        if row["id"] in normalized:
+            row["street"], row["postcode"], lat, lon = normalized[row["id"]]
+            if row["src"] == "paris.fr":
+                row["lat"], row["lon"] = round(lat, 6), round(lon, 6)
+        else:
+            row["street"] = row["raw_address"]
+            if row["src"] == "paris.fr":
+                row["lat"], row["lon"] = row["page_lat"], row["page_lon"]
+                fallback += 1
+    print(f"BAN : {len(normalized)} adresses normalisées ; paris.fr sans adresse reconnue (coordonnées de la page) : {fallback}")
+
+    # OpenStreetMap : adresse des tags, sinon géocodage inverse.
     try:
-        reversed_ = reverse_addresses([r for r in rows if not r["raw_address"] or not r["citycode"]])
+        reversed_ = reverse_addresses([r for r in osm if not (r["raw_address"] and r["postcode"])])
     except Exception as error:  # noqa: BLE001
         print("BAN (inverse) indisponible :", error)
         reversed_ = {}
-    print(f"Adresses normalisées par la BAN : {len(normalized)} ; retrouvées par géocodage inverse : {len(reversed_)}")
+    for row in osm:
+        if row["raw_address"] and row["postcode"]:
+            row["street"] = row["raw_address"]
+        elif row["id"] in reversed_:
+            row["street"], row["postcode"] = reversed_[row["id"]]
+        else:
+            row["street"] = ""
+    print(f"OpenStreetMap : {len(reversed_)} adresses retrouvées par géocodage inverse")
+
+    rows = merge([("paris.fr", paris), ("Apur", apur), ("OpenStreetMap", osm)])
 
     creches = []
     for row in rows:
-        if row["id"] in normalized:
-            street, postcode = normalized[row["id"]][:2]
-        elif row["id"] in reversed_ and not (row["raw_address"] and row["postcode"]):
-            street, postcode = reversed_[row["id"]]
-        else:
-            street, postcode = row["raw_address"], row["postcode"]
+        street, postcode = row["street"], row["postcode"]
         if not street or not postcode.startswith("75"):
             continue
         kind = kind_of(row["source_name"])

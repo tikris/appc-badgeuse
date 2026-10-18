@@ -67,6 +67,9 @@ final class CrecheDirectoryTests: XCTestCase {
             XCTAssertFalse(creche.street.isEmpty, creche.name)
         }
         XCTAssertTrue(directory.licence.contains("ODbL"))
+        // Crèche témoin signalée par un parent, cherchée comme il l'a écrite.
+        let grange = directory.search("Granges aux belles")
+        XCTAssertTrue(grange.contains { $0.postcode == "75010" && $0.name.contains("Grange aux belles") }, "\(grange.map(\.name))")
         print("Liste embarquée : \(directory.creches.count) établissements (\(directory.generated))")
     }
 }

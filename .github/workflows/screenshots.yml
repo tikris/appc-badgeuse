@@ -90,4 +90,5 @@ jobs:
           git add AppStore/raw
           git diff --cached --quiet && exit 0
           git commit -m "Captures brutes App Store (simulateur, CI)"
+          git pull --rebase origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
