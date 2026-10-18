@@ -32,30 +32,29 @@ def section(title, function):
 
 
 def paris_data():
-    seen = {}
-    for term in ["creche", "crèches", "petite enfance", "accueil du jeune enfant", "equipements", "lieux", "etablissements"]:
-        where = urllib.parse.quote(f'"{term}"')
-        url = ("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets?limit=50"
-               f"&where={where}&select=dataset_id,metas")
+    import urllib.error
+    urls = [
+        "https://opendata.paris.fr/api/explore/v2.1/catalog/datasets?limit=50&where=" + urllib.parse.quote('"creche"'),
+        "https://opendata.paris.fr/api/explore/v2.1/catalog/datasets?limit=50&where=" + urllib.parse.quote("search(\"creche\")"),
+        "https://opendata.paris.fr/api/v2/catalog/datasets?rows=50&search=creche",
+        "https://opendata.paris.fr/api/datasets/1.0/search/?rows=50&q=creche",
+        "https://opendata.paris.fr/api/datasets/1.0/search/?rows=50&q=petite+enfance",
+        "https://opendata.paris.fr/api/datasets/1.0/search/?rows=50&q=equipements",
+    ]
+    for url in urls:
         try:
-            results = json.loads(get(url)).get("results", [])
-        except Exception as error:  # noqa: BLE001
-            print(f"[{term}] erreur : {error!r}")
+            body = get(url)
+        except urllib.error.HTTPError as error:
+            print("HTTP", error.code, url, error.read()[:300])
             continue
-        for item in results:
-            metas = item.get("metas", {}).get("default", {})
-            seen[item["dataset_id"]] = (metas.get("title"), metas.get("records_count"), metas.get("modified"))
-    for dataset_id, (title, count, modified) in sorted(seen.items()):
-        print(f"{dataset_id} | {title} | {count} lignes | {modified}")
-    for dataset_id in seen:
-        url = (f"https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/{dataset_id}/records?limit=3"
-               f"&where={urllib.parse.quote(chr(34) + 'grange aux belles' + chr(34))}")
-        try:
-            hits = json.loads(get(url)).get("results", [])
-        except Exception:  # noqa: BLE001
-            continue
-        if hits:
-            print(f"-> « grange aux belles » dans {dataset_id} : {json.dumps(hits[0], ensure_ascii=False)[:700]}")
+        data = json.loads(body)
+        items = data.get("results") or data.get("datasets") or []
+        print("OK", url, len(items))
+        for item in items:
+            dataset = item.get("dataset", item)
+            metas = dataset.get("metas", {})
+            metas = metas.get("default", metas)
+            print("   ", dataset.get("dataset_id") or dataset.get("datasetid"), "|", metas.get("title"), "|", metas.get("records_count"))
 
 
 def data_gouv():
@@ -88,20 +87,35 @@ def overpass():
 
 
 def paris_fr():
+    import gzip
     html = get("https://www.paris.fr/lieux/creche-municipale-grange-aux-belles-hopital-saint-louis-19903")
-    title = re.search(r"<title>(.*?)</title>", html, re.S)
-    print("Titre :", title.group(1).strip() if title else None)
-    for needle in ["latitude", "longitude", "lat", "lng", "GeoCoordinates", "streetAddress", "postalCode", "data-address", "75010"]:
-        for match in list(re.finditer(needle, html))[:2]:
-            print(f"[{needle}]", html[max(0, match.start() - 120):match.end() + 160].replace("\n", " "))
-    links = sorted(set(re.findall(r'href="(/[^"]*lieux[^"]*)"', html)))
-    print("Liens /lieux :", links[:30])
-    for sitemap in ["https://www.paris.fr/sitemap.xml", "https://www.paris.fr/robots.txt"]:
-        try:
-            text = get(sitemap)
-            print(sitemap, len(text), text[:1500])
-        except Exception as error:  # noqa: BLE001
-            print(sitemap, "erreur", repr(error))
+    print("Chemins /api relatifs :", sorted(set(re.findall(r'["\'](/api/[^"\']+)', html)))[:20])
+    for key in ["address", "adresse", "zipcode", "zip_code", "postal", "geo", "coordinates", "Grange"]:
+        for match in list(re.finditer(key, html))[:2]:
+            print(f"[{key}]", html[max(0, match.start() - 150):match.end() + 200].replace("\n", " "))
+    index = get("https://www.paris.fr/lieux/creches-municipales/tous-les-horaires")
+    links = sorted(set(re.findall(r'href="(/lieux/[a-z0-9-]+-\d+)"', index)))
+    print("Index « tous les horaires » :", len(index), "octets,", len(links), "liens de lieux")
+    print("   ", links[:10])
+    for match in list(re.finditer("grange", index, re.I))[:2]:
+        print("[index grange]", index[max(0, match.start() - 300):match.end() + 300].replace("\n", " "))
+    req = urllib.request.Request("https://www.paris.fr/sitemap.xml.gz", headers={"User-Agent": USER_AGENT})
+    raw = urllib.request.urlopen(req, timeout=120).read()
+    try:
+        raw = gzip.decompress(raw)
+    except OSError:
+        pass
+    xml = raw.decode("utf-8", "replace")
+    locs = re.findall(r"<loc>(.*?)</loc>", xml)
+    print("Sitemap :", len(locs), "URL ; exemples :", locs[:5])
+    lieux = [u for u in locs if "/lieux/" in u]
+    from collections import Counter
+    kinds = Counter(re.sub(r"-.*", "", u.split("/lieux/")[1]) for u in lieux)
+    print("Lieux :", len(lieux), kinds.most_common(25))
+    petite = [u for u in lieux if re.search(r"/lieux/(creche|halte|jardin-d|multi|micro|etablissement-d-accueil)", u)]
+    print("Lieux petite enfance :", len(petite))
+    print(Counter(re.match(r".*/lieux/((?:[a-z]+-){1,2})", u).group(1) for u in petite).most_common(20))
+    print([u for u in petite if "grange" in u])
 
 
 def apur():
@@ -127,7 +141,4 @@ def apur():
 
 if __name__ == "__main__":
     section("Paris Data (opendata.paris.fr)", paris_data)
-    section("data.gouv.fr", data_gouv)
-    section("OpenStreetMap (Overpass)", overpass)
     section("paris.fr (fiche Grange aux Belles)", paris_fr)
-    section("Apur", apur)
