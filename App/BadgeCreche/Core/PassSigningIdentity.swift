@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-enum PassSigningError: LocalizedError {
+nonisolated enum PassSigningError: LocalizedError {
     case missingCertificate
     case wrongPassword
     case pkcs12ImportFailed(OSStatus)
@@ -34,7 +34,7 @@ enum PassSigningError: LocalizedError {
 }
 
 /// Certificat « Pass Type ID » + clé privée servant à signer les pass Wallet.
-struct PassSigningIdentity {
+nonisolated struct PassSigningIdentity {
     let certificate: [UInt8]
     let chain: [[UInt8]]
     let privateKey: SecKey

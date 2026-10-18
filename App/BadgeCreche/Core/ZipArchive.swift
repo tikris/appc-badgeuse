@@ -2,8 +2,8 @@ import Foundation
 
 /// Écrit une archive ZIP sans compression (méthode « stored »).
 /// Un fichier .pkpass n'est rien d'autre qu'un ZIP de ce type.
-enum ZipArchive {
-    struct Entry {
+nonisolated enum ZipArchive {
+    nonisolated struct Entry {
         let name: String
         let data: Data
     }
@@ -76,7 +76,7 @@ enum ZipArchive {
     }
 }
 
-enum CRC32 {
+nonisolated enum CRC32 {
     private static let table: [UInt32] = (0..<256).map { index -> UInt32 in
         var value = UInt32(index)
         for _ in 0..<8 {
@@ -94,7 +94,7 @@ enum CRC32 {
     }
 }
 
-private extension Data {
+private nonisolated extension Data {
     mutating func appendLittleEndian(_ value: UInt16) {
         append(UInt8(value & 0xFF))
         append(UInt8(value >> 8))

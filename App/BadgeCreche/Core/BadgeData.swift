@@ -1,7 +1,7 @@
 import Foundation
 
 /// Adresse de la crèche et coordonnées utilisées par Wallet pour afficher le badge à proximité.
-struct CrecheAddress: Codable, Hashable {
+nonisolated struct CrecheAddress: Codable, Hashable {
     var label: String
     var latitude: Double
     var longitude: Double
@@ -10,7 +10,7 @@ struct CrecheAddress: Codable, Hashable {
 }
 
 /// Le badge enregistré localement. Version 1 : un seul badge par iPhone.
-struct BadgeData: Codable, Hashable {
+nonisolated struct BadgeData: Codable, Hashable {
     /// Identifiant stable du pass dans Wallet (permet de le mettre à jour plutôt que d'en créer un second).
     var serialNumber: String
     /// Contenu exact du QR code remis par la crèche.

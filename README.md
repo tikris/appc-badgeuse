@@ -65,7 +65,7 @@ App/BadgeCreche/
   BadgeCrecheApp.swift       point d'entrée
   ContentView.swift          écran racine
   AppConfig.swift            textes, liens et mentions légales APPC
-  Core/                      sans UIKit, testé sur macOS
+  Core/                      sans UIKit, `nonisolated` (utilisable hors du fil principal), testé sur macOS
     BadgeData.swift          modèle du badge
     PassBuilder.swift        pass.json + manifest + signature + archive .pkpass
     CMSSignature.swift       signature PKCS#7 détachée (RFC 5652)
@@ -77,6 +77,8 @@ App/BadgeCreche/
 docs/                        site GitHub Pages : présentation, confidentialité, mentions légales
 Tests/                       tests de signature avec une fausse chaîne de certificats
 ```
+
+**Rapidité** : rien de lourd n'est fait au lancement ni sur le fil principal. La liste des crèches (≈ 1 200 fiches) est lue et indexée une seule fois en arrière-plan (`CrecheCatalog`), dès l'écran d'accueil ou à l'ouverture de l'éditeur ; les 3 plus proches sont calculées en un passage, une fois par position. La signature du pass (import du `.p12`, RSA, archive) se fait dans un acteur dédié (`PassSigner`) qui garde l'identité en mémoire.
 
 La CI (GitHub Actions, macOS) compile le projet Xcode (simulateur et iPhone) et vérifie la signature d'un pass généré avec le framework Security d'Apple et avec OpenSSL.
 

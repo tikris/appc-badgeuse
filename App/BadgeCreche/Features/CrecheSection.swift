@@ -1,12 +1,36 @@
 import SwiftUI
 
-/// Liste des crèches embarquée dans l'application (Resources/creches-paris.json).
+/// Liste des crèches embarquée (Resources/creches-paris.json) : environ 1 200 fiches lues et indexées
+/// une seule fois, hors du fil principal, pour ne jamais figer l'interface.
 @MainActor
-enum CrecheCatalog {
-    static let paris: CrecheDirectory? = Bundle.main
-        .url(forResource: "creches-paris", withExtension: "json")
-        .flatMap { try? Data(contentsOf: $0) }
-        .flatMap { try? CrecheDirectory(data: $0) }
+@Observable
+final class CrecheCatalog {
+    static let shared = CrecheCatalog()
+
+    /// nil tant que la liste n'est pas chargée (ou si le fichier manque).
+    private(set) var paris: CrecheDirectory?
+    private(set) var isLoaded = false
+    @ObservationIgnored private var loading: Task<CrecheDirectory?, Never>?
+
+    private init() {}
+
+    /// Lance le chargement si besoin et attend la liste ; les appels simultanés partagent le même chargement.
+    @discardableResult
+    func load() async -> CrecheDirectory? {
+        if isLoaded { return paris }
+        let task = loading ?? Task.detached(priority: .userInitiated) { Self.readBundledList() }
+        loading = task
+        let directory = await task.value
+        paris = directory
+        isLoaded = true
+        return directory
+    }
+
+    private nonisolated static func readBundledList() -> CrecheDirectory? {
+        Bundle.main.url(forResource: "creches-paris", withExtension: "json")
+            .flatMap { try? Data(contentsOf: $0) }
+            .flatMap { try? CrecheDirectory(data: $0) }
+    }
 }
 
 /// Choix de la crèche : les 3 plus proches de la position, sinon la liste complète.
@@ -19,6 +43,8 @@ struct CrecheSection: View {
     let locatesOnAppear: Bool
 
     @StateObject private var location = LocationProvider()
+    /// Les 3 plus proches, calculées une fois par position (nil pendant le calcul).
+    @State private var nearby: [NearbyCreche]?
 
     var body: some View {
         Section {
@@ -40,7 +66,7 @@ struct CrecheSection: View {
             } else {
                 suggestions
                 NavigationLink {
-                    CrecheListView(directory: CrecheCatalog.paris, onSelect: { select($0, source: .list) }, onManualAddress: selectManual)
+                    CrecheListView(onSelect: { select($0, source: .list) }, onManualAddress: selectManual)
                 } label: {
                     Label("Autre crèche", systemImage: "list.bullet")
                 }
@@ -54,6 +80,14 @@ struct CrecheSection: View {
             if locatesOnAppear, address == nil, location.status == .idle {
                 location.locate()
             }
+        }
+        .task {
+            await CrecheCatalog.shared.load()
+        }
+        .task(id: location.status) {
+            guard case .located(let latitude, let longitude) = location.status else { return }
+            nearby = nil
+            nearby = await CrecheCatalog.shared.load()?.nearest(latitude: latitude, longitude: longitude) ?? []
         }
     }
 
@@ -72,12 +106,20 @@ struct CrecheSection: View {
                 Text("Recherche des crèches proches…")
                     .foregroundStyle(.secondary)
             }
-        case .located(let latitude, let longitude):
-            ForEach(CrecheCatalog.paris?.nearest(latitude: latitude, longitude: longitude) ?? [], id: \.creche.id) { nearby in
-                Button {
-                    select(nearby.creche, source: .nearby)
-                } label: {
-                    CrecheRow(creche: nearby.creche, distance: nearby.distance)
+        case .located:
+            if let nearby {
+                ForEach(nearby, id: \.creche.id) { item in
+                    Button {
+                        select(item.creche, source: .nearby)
+                    } label: {
+                        CrecheRow(creche: item.creche, distance: item.distance)
+                    }
+                }
+            } else {
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text("Recherche des crèches proches…")
+                        .foregroundStyle(.secondary)
                 }
             }
         case .denied:
@@ -136,22 +178,24 @@ struct CrecheRow: View {
 
 /// Toutes les crèches de Paris, par arrondissement, avec recherche.
 struct CrecheListView: View {
-    let directory: CrecheDirectory?
     let onSelect: (Creche) -> Void
     let onManualAddress: (CrecheAddress) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
-
-    private var groups: [(title: String, creches: [Creche])] {
-        let results = directory?.search(query) ?? []
-        return Dictionary(grouping: results, by: \.arrondissementNumber)
-            .sorted { $0.key < $1.key }
-            .map { (title: $0.value[0].arrondissement, creches: $0.value) }
-    }
+    /// Recalculés seulement quand la recherche change, pas à chaque rafraîchissement de l'écran.
+    @State private var groups: [(title: String, creches: [Creche])] = []
+    private var catalog: CrecheCatalog { .shared }
 
     var body: some View {
         List {
+            if !catalog.isLoaded {
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text("Chargement de la liste…")
+                        .foregroundStyle(.secondary)
+                }
+            }
             ForEach(groups, id: \.title) { group in
                 Section(group.title) {
                     ForEach(group.creches) { creche in
@@ -172,12 +216,16 @@ struct CrecheListView: View {
                     }
                 }
             } footer: {
-                if let directory {
+                if let directory = catalog.paris {
                     Text("\(directory.creches.count) établissements. Source : \(directory.source). Licence : \(directory.licence). Mise à jour : \(directory.generated).")
                 }
             }
         }
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Nom, rue ou arrondissement")
+        .task(id: query) {
+            let directory = await catalog.load()
+            groups = CrecheDirectory.byArrondissement(directory?.search(query) ?? [])
+        }
         .navigationTitle("Choisir une crèche")
         .navigationBarTitleDisplayMode(.inline)
     }

@@ -55,6 +55,10 @@ struct WelcomeView: View {
             }
             .padding(24)
         }
+        .task {
+            // Préchargement en arrière-plan pendant la lecture de l'accueil : la liste est prête à l'ouverture de l'éditeur.
+            await CrecheCatalog.shared.load()
+        }
     }
 
     private func step(symbol: String, title: String, detail: String) -> some View {

@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 
 /// Textes et couleurs du pass (fournis par AppConfig côté application).
-struct PassBranding {
+nonisolated struct PassBranding {
     var defaultTitle: String
     var backgroundColor: String
     var foregroundColor: String
@@ -16,7 +16,7 @@ struct PassBranding {
 }
 
 /// Construit le fichier .pkpass signé, entièrement sur l'appareil.
-enum PassBuilder {
+nonisolated enum PassBuilder {
     /// Distance maximale (en mètres) à la crèche pour que Wallet propose le badge sur l'écran verrouillé.
     static let relevantDistance = 10
 

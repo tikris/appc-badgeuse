@@ -48,7 +48,7 @@ struct BadgeHomeView: View {
             .padding()
         }
         .task(id: badge) {
-            preparePass()
+            await preparePass()
         }
         .confirmationDialog("Supprimer le badge ?", isPresented: $isConfirmingDeletion, titleVisibility: .visible) {
             Button("Supprimer", role: .destructive, action: deleteBadge)
@@ -123,10 +123,11 @@ struct BadgeHomeView: View {
         Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
     }
 
-    private func preparePass() {
+    private func preparePass() async {
         guard ScreenshotMode.scene == nil else { return }
         do {
-            let newPass = try WalletService.makePass(for: badge)
+            let newPass = try await WalletService.makePass(for: badge)
+            guard !Task.isCancelled else { return }
             pass = newPass
             if store.needsWalletRefresh, WalletService.replaceInWallet(with: newPass) {
                 statusMessage = "Badge mis à jour dans Apple Wallet."

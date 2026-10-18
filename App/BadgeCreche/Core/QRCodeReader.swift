@@ -3,7 +3,7 @@ import Foundation
 import ImageIO
 import Vision
 
-enum QRCodeReaderError: LocalizedError {
+nonisolated enum QRCodeReaderError: LocalizedError {
     case noQRCode
     case unreadableFile
 

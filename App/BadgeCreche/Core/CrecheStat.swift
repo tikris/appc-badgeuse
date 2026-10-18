@@ -3,13 +3,13 @@ import Foundation
 /// Statistique facultative (désactivée par défaut) envoyée au Matomo de l'APPC, uniquement avec
 /// l'accord du parent : la crèche choisie et la façon dont elle l'a été. Ni QR code, ni nom d'enfant,
 /// ni position, ni identifiant de visiteur ; l'adresse d'une crèche hors liste n'est jamais envoyée.
-struct CrecheStat: Equatable {
-    enum Event: String {
+nonisolated struct CrecheStat: Equatable {
+    nonisolated enum Event: String {
         case created = "Badge créé"
         case crecheChanged = "Crèche changée"
     }
 
-    enum Source: String {
+    nonisolated enum Source: String {
         case nearby = "Parmi les 3 plus proches"
         case list = "Dans la liste"
         case manual = "Hors liste"

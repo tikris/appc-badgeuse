@@ -14,6 +14,9 @@ final class CrecheDirectoryTests: XCTestCase {
         XCTAssertEqual(nearest.map(\.creche.id), ["4", "3", "1"])
         XCTAssertEqual(nearest[0].distance, 549, accuracy: 5)
         XCTAssertTrue(zip(nearest, nearest.dropFirst()).allSatisfy { $0.distance <= $1.distance })
+        XCTAssertEqual(try sample().nearest(latitude: 48.8640, longitude: 2.3430, count: 10).count, 5)
+        let groups = CrecheDirectory.byArrondissement(try sample().creches)
+        XCTAssertEqual(groups.map(\.title), ["1er arrondissement", "10e arrondissement", "16e arrondissement", "18e arrondissement", "19e arrondissement"])
     }
 
     func testSearchIgnoresAccentsAndCase() throws {

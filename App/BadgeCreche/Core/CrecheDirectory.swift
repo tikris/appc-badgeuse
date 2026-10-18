@@ -1,7 +1,7 @@
 import Foundation
 
 /// Un établissement d'accueil du jeune enfant de Paris (liste embarquée, voir tools/fetch_creches.py).
-struct Creche: Codable, Hashable, Identifiable {
+nonisolated struct Creche: Codable, Hashable, Identifiable {
     let id: String
     let name: String
     let kind: String
@@ -44,21 +44,21 @@ struct Creche: Codable, Hashable, Identifiable {
     }
 }
 
-struct NearbyCreche: Hashable {
+nonisolated struct NearbyCreche: Hashable {
     let creche: Creche
     /// En mètres.
     let distance: Double
 }
 
 /// Liste des crèches, consultée entièrement sur l'appareil : la position ne quitte jamais l'iPhone.
-struct CrecheDirectory {
+nonisolated struct CrecheDirectory {
     let creches: [Creche]
     let source: String
     let licence: String
     let generated: String
     private let searchKeys: [String]
 
-    private struct Document: Decodable {
+    private nonisolated struct Document: Decodable {
         let source: String
         let licence: String
         let generated: String
@@ -76,11 +76,25 @@ struct CrecheDirectory {
         }
     }
 
+    /// Les `count` plus proches, en un seul passage sur la liste (sans la trier entièrement).
     func nearest(latitude: Double, longitude: Double, count: Int = 3) -> [NearbyCreche] {
-        let sorted = creches
-            .map { NearbyCreche(creche: $0, distance: Self.distance(latitude, longitude, $0.lat, $0.lon)) }
-            .sorted { $0.distance < $1.distance }
-        return Array(sorted.prefix(count))
+        var best: [NearbyCreche] = []
+        best.reserveCapacity(count + 1)
+        for creche in creches {
+            let distance = Self.distance(latitude, longitude, creche.lat, creche.lon)
+            guard best.count < count || distance < best[best.count - 1].distance else { continue }
+            let index = best.firstIndex { distance < $0.distance } ?? best.count
+            best.insert(NearbyCreche(creche: creche, distance: distance), at: index)
+            if best.count > count { best.removeLast() }
+        }
+        return best
+    }
+
+    /// Regroupement par arrondissement (1er, 2e…), dans l'ordre de la liste à l'intérieur de chaque groupe.
+    static func byArrondissement(_ creches: [Creche]) -> [(title: String, creches: [Creche])] {
+        Dictionary(grouping: creches, by: \.arrondissementNumber)
+            .sorted { $0.key < $1.key }
+            .map { (title: $0.value[0].arrondissement, creches: $0.value) }
     }
 
     /// Recherche sans accents, majuscules ni ponctuation ; chaque mot doit apparaître (nom, rue,

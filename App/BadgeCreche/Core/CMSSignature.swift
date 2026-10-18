@@ -7,7 +7,7 @@ import Foundation
 /// ContentInfo { signedData, SignedData { v1, {sha256}, {data}, [0] certificats,
 ///   { SignerInfo { v1, émetteur+n° de série, sha256, [0] attributs signés,
 ///     rsaEncryption, signature } } } }
-enum CMSSignature {
+nonisolated enum CMSSignature {
     static func detached(
         content: Data,
         certificate: [UInt8],

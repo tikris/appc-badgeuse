@@ -2,7 +2,7 @@ import Foundation
 
 /// Encodeur DER minimal : juste ce qu'il faut pour produire une signature
 /// PKCS#7 (CMS SignedData) détachée, comme l'exige Apple Wallet.
-enum DER {
+nonisolated enum DER {
     static func tlv(_ tag: UInt8, _ content: [UInt8]) -> [UInt8] {
         [tag] + length(content.count) + content
     }
@@ -80,7 +80,7 @@ enum DER {
     }
 }
 
-enum OID {
+nonisolated enum OID {
     static let data = "1.2.840.113549.1.7.1"
     static let signedData = "1.2.840.113549.1.7.2"
     static let contentType = "1.2.840.113549.1.9.3"
@@ -93,14 +93,14 @@ enum OID {
 }
 
 /// Élément DER décodé (tag, octets complets, contenu).
-struct DERElement {
+nonisolated struct DERElement {
     let tag: UInt8
     let bytes: [UInt8]
     let content: [UInt8]
 }
 
-enum DERParser {
-    struct MalformedData: Error {}
+nonisolated enum DERParser {
+    nonisolated struct MalformedData: Error {}
 
     static func element(in bytes: [UInt8], at offset: Int = 0) throws -> (element: DERElement, next: Int) {
         guard offset + 2 <= bytes.count else { throw MalformedData() }
@@ -141,7 +141,7 @@ enum DERParser {
 }
 
 /// Les quelques champs d'un certificat X.509 dont la signature a besoin.
-struct CertificateInfo {
+nonisolated struct CertificateInfo {
     let serialNumber: [UInt8]
     let issuer: [UInt8]
     let subject: [UInt8]
