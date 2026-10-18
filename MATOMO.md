@@ -64,7 +64,24 @@ static let statsEndpoint: URL? = URL(string: "https://stats.appc.paris/matomo.ph
 static let statsSiteID = 1
 ```
 
-Puis nouveau build. L'option apparaît dans l'éditeur du badge et dans « À propos ».
+Dans `App/BadgeCreche/PrivacyInfo.xcprivacy`, déclarer la collecte dans `NSPrivacyCollectedDataTypes` :
+
+```xml
+<dict>
+	<key>NSPrivacyCollectedDataType</key>
+	<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+	<key>NSPrivacyCollectedDataTypeLinked</key>
+	<false/>
+	<key>NSPrivacyCollectedDataTypeTracking</key>
+	<false/>
+	<key>NSPrivacyCollectedDataTypePurposes</key>
+	<array>
+		<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+	</array>
+</dict>
+```
+
+Puis nouveau build. L'option apparaît dans l'éditeur du badge et dans « À propos ». Mettre à jour l'étiquette de confidentialité et les notes App Review (PUBLICATION.md).
 
 **Test du serveur, avant l'app.** La commande suivante doit répondre `HTTP/2 204` :
 

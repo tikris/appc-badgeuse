@@ -83,7 +83,8 @@ crèche,badge,badgeuse,QR code,cartes,wallet,pass,parents,Paris,garde,enfant,poi
 **URL d'assistance** : `https://tikris.github.io/appc-badgeuse/#support`
 **URL de confidentialité** : `https://tikris.github.io/appc-badgeuse/confidentialite.html`
 
-**Confidentialité de l'app (« étiquette »)** : *Données non associées à votre identité* → *Données d'utilisation* → *Interactions avec le produit*, finalité *Analyses* ; aucune donnée utilisée pour vous suivre. Ce sont les statistiques facultatives (crèche choisie, envoyée au Matomo de l'APPC seulement si le parent l'accepte, voir [MATOMO.md](MATOMO.md)). La position est utilisée uniquement sur l'appareil (tri des crèches) et jamais transmise : au sens d'Apple, elle n'est pas « collectée ». Le fichier `PrivacyInfo.xcprivacy` déclare la même chose.
+**Confidentialité de l'app (« étiquette »)** : *Données non collectées*, tant que Matomo n'est pas branché (`AppConfig.statsEndpoint` vide : rien n'est envoyé). La position est utilisée uniquement sur l'appareil (tri des crèches) et jamais transmise : au sens d'Apple, elle n'est pas « collectée ».
+Dès que Matomo est branché (voir [MATOMO.md](MATOMO.md)) : *Données non associées à votre identité* → *Données d'utilisation* → *Interactions avec le produit*, finalité *Analyses* ; aucune donnée utilisée pour vous suivre. Mettre à jour en même temps `PrivacyInfo.xcprivacy` et les notes App Review ci-dessous.
 
 **Classification par âge** : répondre « Non » / « Aucun » partout → 4+. Ne pas cocher « Made for Kids » (l'app s'adresse aux parents).
 
@@ -95,18 +96,37 @@ crèche,badge,badgeuse,QR code,cartes,wallet,pass,parents,Paris,garde,enfant,poi
 
 **Icône** : rien à envoyer, App Store Connect la prend dans le build. Copie en 1024 × 1024 : [`AppStore/icone-1024.png`](AppStore/icone-1024.png).
 
-**Notes pour l'App Review** (en anglais) :
+**Notes pour l'App Review** (en anglais, < 4 000 caractères ; reprend les informations demandées par Apple au titre de la règle 2.1). Joindre aussi la vidéo et le QR code de test dans *Pièce jointe* :
 ```
-Badge Crèche lets parents store the QR code their nursery gives them for its check-in terminal ("badgeuse") as an Apple Wallet pass that appears on the Lock Screen near the nursery. No account: the pass is generated and signed on the device. Optional, opt-in analytics (off by default): if the parent enables "Partager le nom de ma crèche", the app sends the chosen nursery's name, once, to the association's self-hosted Matomo server. Nothing else (no QR code, child name, location or identifier).
+1. SCREEN RECORDING
+Attached: recorded on a physical iPhone running the latest iOS. It starts from the Home Screen and shows the whole flow: launch, choosing the nursery, scanning its QR code, adding the pass to Apple Wallet, editing and deleting the badge, and the About screen. The app has no account, no user-generated content and no paid content.
 
-How to test:
-1. Open https://tikris.github.io/appc-badgeuse/demo-qr.png and save the image to Photos (or display it on another screen and use "Scanner le QR code").
-2. Tap "Créer mon badge". The app asks for your location, only to suggest the 3 nearest nurseries; it is processed on device and never sent anywhere. Outside Paris, or if you decline, tap "Autre crèche" and pick any nursery from the list (search e.g. "Lauzin").
-3. In "QR code de la crèche", tap "Choisir une photo ou une capture d'écran" and pick the image.
-4. Optionally enable "Afficher le nom de l'enfant" and type a first name.
-5. Tap "Enregistrer", then "Add to Apple Wallet".
+2. PURPOSE AND AUDIENCE
+In Paris, many nurseries ("crèches") use a check-in terminal ("badgeuse"): at the start of the year, each family receives a printed QR code that parents scan at drop-off and pick-up. This paper badge is often forgotten or lost, or hard to find while carrying a child. Badge Crèche turns this QR code into an Apple Wallet pass that appears on the Lock Screen when the parent arrives at the nursery.
+Audience: parents of young children in Paris nurseries. Free, no ads, no account. Published by Christophe Amalric, president of the non-profit parents' association Parents à Paris Centre (APPC), on behalf of the association.
 
-The app is published free of charge by the non-profit parents' association Parents à Paris Centre (APPC). It is not affiliated with the City of Paris or with nursery operators. The WhatsApp link in "À propos" invites parents to join the association's community.
+3. HOW TO TEST (no login needed)
+Test QR code: attached image, also at https://tikris.github.io/appc-badgeuse/demo-qr.png. Show it on another screen to use the camera, or save it to Photos to import it.
+1) Tap "Créer mon badge".
+2) Location is optional and used on device only to suggest the 3 nearest nurseries. Outside Paris they are far away: pick one, or tap "Autre crèche" and choose any nursery in the list (search e.g. "Montmartre").
+3) In "QR code de la crèche", tap "Scanner le QR code" and point the camera at the test code (or "Choisir une photo ou une capture d'écran", or "Importer un fichier (PDF, image)").
+4) Optional: turn on "Afficher le nom de l'enfant" and type a first name.
+5) Tap "Enregistrer", then "Add to Apple Wallet" ("Ajouter à l'app Cartes" in French).
+The main screen then offers "Modifier le badge" and "Supprimer le badge"; the (i) button opens About. Near the nursery, iOS can suggest the pass on the Lock Screen (PassKit location relevance).
+
+4. EXTERNAL SERVICES
+No server, no third-party SDK, no analytics, no payment, no authentication service, no AI service. Apple frameworks only:
+- PassKit / Apple Wallet: the pass is generated and signed on the device;
+- Core Location: on device only, to sort nurseries by distance;
+- VisionKit / Vision: on-device QR code reading;
+- MapKit / Apple Maps: map preview of the nursery and, only if it is not in the list, address search.
+The list of Paris nurseries is bundled in the app (open data from Apur, ODbL licence; addresses from the French Base Adresse Nationale, Licence Ouverte) and is never downloaded at runtime. Support and privacy pages are static pages on GitHub Pages. About links to the association's WhatsApp community.
+
+5. REGIONAL DIFFERENCES
+The app works the same in all regions. The interface is in French and the bundled list covers Paris; anywhere, the user can pick a nursery from the list or search any address with Apple Maps ("Ma crèche n'est pas dans la liste").
+
+6. REGULATED INDUSTRY / THIRD-PARTY MATERIAL
+Not a regulated industry and no protected third-party material. The QR code is the parent's own check-in code, given by their nursery for their personal use; the app stores it unchanged on the device. It does not connect to check-in terminals or their providers and does not create or alter any credential. The app is independent and not affiliated with the City of Paris or nursery operators (stated in the app and on the product page). The nursery list is open data used under the ODbL licence, with attribution in the app and on the website.
 ```
 
 ## 4. Après la mise en ligne

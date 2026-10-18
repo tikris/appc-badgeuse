@@ -6,22 +6,10 @@
 	<false/>
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
+	<!-- Rien n'est collecté tant qu'AppConfig.statsEndpoint est vide. En branchant Matomo, déclarer
+	     NSPrivacyCollectedDataTypeProductInteraction (non liée, sans suivi, finalité Analytics) : voir MATOMO.md. -->
 	<key>NSPrivacyCollectedDataTypes</key>
-	<array>
-		<!-- Statistiques facultatives (désactivées par défaut) : crèche choisie, envoyée au Matomo de l'APPC. -->
-		<dict>
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
-			</array>
-		</dict>
-	</array>
+	<array/>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
 		<!-- Réglages de l'app (accord pour les statistiques, version du badge), lus par l'app elle-même. -->
