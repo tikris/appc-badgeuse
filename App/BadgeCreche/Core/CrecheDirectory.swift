@@ -29,9 +29,13 @@ struct Creche: Codable, Hashable, Identifiable {
         }
     }
 
-    /// Ex. « Crèche collective municipale · 22 Rue Lauzin, 75019 Paris ».
+    /// Ex. « Crèche municipale · 22 Rue Lauzin, 75019 Paris » ; l'adresse seule quand le nom
+    /// commence déjà par la catégorie (« Crèche municipale Grange aux belles »).
     var subtitle: String {
         let category = [kind, management].compactMap { $0 }.joined(separator: " ")
+        if management != nil, CrecheDirectory.fold(name).hasPrefix(CrecheDirectory.fold(category)) {
+            return fullAddress
+        }
         return "\(category) · \(fullAddress)"
     }
 
@@ -79,17 +83,26 @@ struct CrecheDirectory {
         return Array(sorted.prefix(count))
     }
 
-    /// Recherche sans accents ni majuscules ; chaque mot doit apparaître (nom, rue, code postal, arrondissement).
+    /// Recherche sans accents, majuscules ni ponctuation ; chaque mot doit apparaître (nom, rue,
+    /// code postal, arrondissement). Un pluriel est toléré : « granges » trouve « Grange aux Belles ».
     func search(_ query: String) -> [Creche] {
         let terms = Self.fold(query).split(separator: " ").map(String.init)
         guard !terms.isEmpty else { return creches }
         return zip(creches, searchKeys)
-            .filter { _, key in terms.allSatisfy { key.contains($0) } }
+            .filter { _, key in terms.allSatisfy { Self.key(key, contains: $0) } }
             .map(\.0)
     }
 
+    private static func key(_ key: String, contains term: String) -> Bool {
+        if key.contains(term) { return true }
+        guard term.count > 3, let last = term.last, last == "s" || last == "x" else { return false }
+        return key.contains(term.dropLast())
+    }
+
+    /// Minuscules sans accents ; tirets, apostrophes et ponctuation deviennent des espaces.
     static func fold(_ text: String) -> String {
         text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "fr_FR"))
+            .replacingOccurrences(of: "[-'’,.()&/]", with: " ", options: .regularExpression)
     }
 
     /// Distance à vol d'oiseau (formule de haversine), en mètres.

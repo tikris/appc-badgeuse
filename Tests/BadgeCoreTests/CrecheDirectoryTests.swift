@@ -23,6 +23,10 @@ final class CrecheDirectoryTests: XCTestCase {
         XCTAssertEqual(directory.search("16e").map(\.id), ["5"])
         XCTAssertEqual(directory.search("75019").map(\.id), ["1"])
         XCTAssertEqual(directory.search("  ").count, 5)
+        // Ponctuation et pluriels tolérés.
+        XCTAssertEqual(directory.search("saint-denis").map(\.id), ["4"])
+        XCTAssertEqual(directory.search("lauzins").map(\.id), ["1"])
+        XCTAssertEqual(directory.search("l'aqueduc haltes").map(\.id), ["3"])
         XCTAssertTrue(directory.search("introuvable").isEmpty)
     }
 
@@ -32,6 +36,11 @@ final class CrecheDirectoryTests: XCTestCase {
         XCTAssertEqual(creches[4].arrondissementNumber, 16)
         XCTAssertEqual(creches[0].subtitle, "Crèche municipale · 22 Rue Lauzin, 75019 Paris")
         XCTAssertEqual(creches[3].subtitle, "Crèche · 12 Rue Saint-Denis, 75001 Paris")
+        let official = Creche(
+            id: "pf-19903", name: "Crèche municipale Grange aux belles, Hôpital Saint-Louis", kind: "Crèche",
+            management: "municipale", street: "16 Rue de la Grange aux Belles", postcode: "75010", lat: 48.8748, lon: 2.3667
+        )
+        XCTAssertEqual(official.subtitle, "16 Rue de la Grange aux Belles, 75010 Paris")
         let address = creches[0].badgeAddress
         XCTAssertEqual(address.name, "Crèche rue Lauzin")
         XCTAssertEqual(address.label, "22 Rue Lauzin, 75019 Paris")
