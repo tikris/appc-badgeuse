@@ -111,6 +111,13 @@ Dès que Matomo est branché (voir [MATOMO.md](MATOMO.md)) : *Données non assoc
 
 **Icône** : rien à envoyer, App Store Connect la prend dans le build. Copie en 1024 × 1024 : [`AppStore/icone-1024.png`](AppStore/icone-1024.png).
 
+**Nouveautés de la version 1.1** (4 000 car. max)
+```
+• Distance réglable : choisissez à quelle distance de la crèche le badge apparaît sur l'écran verrouillé (10, 25 ou 50 m), ou désactivez l'affichage automatique.
+• Entrée de la crèche : touchez la carte (vue satellite) pour placer le repère exactement sur la porte.
+Réglages dans « Modifier le badge » → « Écran verrouillé ».
+```
+
 **Notes pour l'App Review** (en anglais, < 4 000 caractères ; informations demandées par Apple au titre de la règle 2.1) : dans [`AppStore/review-notes.txt`](AppStore/review-notes.txt). Le workflow « TestFlight » les envoie dans App Store Connect avec le QR code de démonstration en pièce jointe (`tools/asc_release.swift`) ; joindre aussi la vidéo.
 
 ## 4. Après la mise en ligne

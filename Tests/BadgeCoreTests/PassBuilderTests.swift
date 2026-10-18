@@ -119,6 +119,39 @@ final class PassBuilderTests: XCTestCase {
         XCTAssertTrue(text.contains("Crèche des Lilas"))
     }
 
+    // MARK: Écran verrouillé
+
+    func testLockScreenDistanceChosenByParent() throws {
+        var badge = Self.sampleBadge(showsChildName: false)
+        XCTAssertEqual(try Self.passDictionary(for: badge)["maxDistance"] as? Int, 10)
+
+        badge.lockScreenDistance = .approach
+        let approach = try Self.passDictionary(for: badge)
+        XCTAssertEqual(approach["maxDistance"] as? Int, 50)
+        XCTAssertEqual((approach["locations"] as? [[String: Any]])?.count, 1)
+
+        badge.lockScreenDistance = .never
+        let never = try Self.passDictionary(for: badge)
+        XCTAssertNil(never["locations"])
+        XCTAssertNil(never["maxDistance"])
+    }
+
+    func testLockScreenDistanceIsSavedAndOptional() throws {
+        var badge = Self.sampleBadge(showsChildName: false)
+        // Badge enregistré avant que la distance soit réglable : distance standard.
+        var saved = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(badge)) as? [String: Any])
+        saved["lockScreenMeters"] = nil
+        let older = try JSONDecoder().decode(BadgeData.self, from: JSONSerialization.data(withJSONObject: saved))
+        XCTAssertEqual(older.lockScreenDistance, .standard)
+        XCTAssertEqual(older, badge)
+
+        badge.lockScreenDistance = .never
+        XCTAssertEqual(try JSONDecoder().decode(BadgeData.self, from: JSONEncoder().encode(badge)).lockScreenDistance, .never)
+        // Valeur inconnue (version plus récente) : distance standard plutôt qu'un badge illisible.
+        badge.lockScreenMeters = 15
+        XCTAssertEqual(try JSONDecoder().decode(BadgeData.self, from: JSONEncoder().encode(badge)).lockScreenDistance, .standard)
+    }
+
     // MARK: Outils
 
     static let branding = PassBranding(
@@ -145,6 +178,11 @@ final class PassBuilderTests: XCTestCase {
             address: CrecheAddress(label: "2 rue de Rivoli, 75004 Paris", latitude: 48.8556, longitude: 2.3600),
             updatedAt: Date(timeIntervalSince1970: 1_790_000_000)
         )
+    }
+
+    static func passDictionary(for badge: BadgeData) throws -> [String: Any] {
+        let json = try PassBuilder.passJSON(for: badge, passTypeIdentifier: "pass.x", teamIdentifier: "T", branding: branding)
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: json) as? [String: Any])
     }
 
     private func fixture(_ name: String) throws -> Data {
