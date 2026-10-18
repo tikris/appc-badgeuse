@@ -1,7 +1,8 @@
 name: TestFlight
 
-# Archive, signe et envoie un build sur App Store Connect (TestFlight), puis envoie les captures
-# App Store. Lancement manuel (onglet Actions → TestFlight → Run workflow), voir PUBLICATION.md.
+# Archive, signe et envoie un build sur App Store Connect (TestFlight), envoie les captures App Store,
+# puis prépare la version : build associé, notes App Review, QR code de démonstration en pièce jointe
+# (tools/asc_release.swift). Lancement manuel (Actions → TestFlight → Run workflow), voir PUBLICATION.md.
 #
 # Secrets à créer une fois (Settings → Secrets and variables → Actions) :
 #   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8      clé API App Store Connect (contenu du fichier .p8)
@@ -20,6 +21,10 @@ on:
         description: "Envoyer les captures AppStore/captures sur App Store Connect"
         type: boolean
         default: true
+      prepare_release:
+        description: "Associer le build à la version et mettre à jour les notes App Review"
+        type: boolean
+        default: true
       build_number:
         description: "Numéro de build (vide : celui du projet)"
         type: string
@@ -34,6 +39,8 @@ jobs:
     name: Build TestFlight
     if: ${{ inputs.upload_build }}
     runs-on: macos-latest
+    outputs:
+      build_number: ${{ steps.archive.outputs.build }}
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -96,6 +103,7 @@ jobs:
           printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
           echo "ASC_KEY_PATH=$RUNNER_TEMP/keys/AuthKey.p8" >> "$GITHUB_ENV"
       - name: Archive
+        id: archive
         run: |
           set -euo pipefail
           BUILD="${{ inputs.build_number }}"
@@ -104,6 +112,7 @@ jobs:
               | awk '/ CURRENT_PROJECT_VERSION = / { print $3; exit }')
           fi
           echo "Build $BUILD"
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
           xcodebuild archive -quiet \
             -project BadgeCreche.xcodeproj -scheme BadgeCreche -configuration Release \
             -destination "generic/platform=iOS" -archivePath "$RUNNER_TEMP/BadgeCreche.xcarchive" \
@@ -165,4 +174,27 @@ jobs:
           mkdir -p "$RUNNER_TEMP/keys"
           printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
           ASC_KEY_PATH="$RUNNER_TEMP/keys/AuthKey.p8" swift tools/upload_screenshots.swift AppStore/captures fr-FR
+          rm -f "$RUNNER_TEMP/keys/AuthKey.p8"
+
+  release:
+    name: Version App Store (build, notes App Review)
+    needs: build
+    if: ${{ !cancelled() && inputs.prepare_release && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
+    runs-on: macos-latest
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Préparation de la version
+        run: |
+          set -euo pipefail
+          BUILD="${{ needs.build.outputs.build_number || inputs.build_number }}"
+          if [ -z "$BUILD" ]; then
+            BUILD=$(sed -n 's/.*CURRENT_PROJECT_VERSION = \([0-9]*\);.*/\1/p' BadgeCreche.xcodeproj/project.pbxproj | head -1)
+          fi
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
+          ASC_KEY_PATH="$RUNNER_TEMP/keys/AuthKey.p8" swift tools/asc_release.swift "$BUILD"
           rm -f "$RUNNER_TEMP/keys/AuthKey.p8"

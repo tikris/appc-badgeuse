@@ -111,38 +111,7 @@ Dès que Matomo est branché (voir [MATOMO.md](MATOMO.md)) : *Données non assoc
 
 **Icône** : rien à envoyer, App Store Connect la prend dans le build. Copie en 1024 × 1024 : [`AppStore/icone-1024.png`](AppStore/icone-1024.png).
 
-**Notes pour l'App Review** (en anglais, < 4 000 caractères ; reprend les informations demandées par Apple au titre de la règle 2.1). Joindre aussi la vidéo et le QR code de test dans *Pièce jointe* :
-```
-1. SCREEN RECORDING
-Attached: recorded on a physical iPhone running the latest iOS. It starts from the Home Screen and shows the whole flow: launch, choosing the nursery, scanning its QR code, adding the pass to Apple Wallet, editing and deleting the badge, and the About screen. The app has no account, no user-generated content and no paid content.
-
-2. PURPOSE AND AUDIENCE
-In Paris, many nurseries ("crèches") use a check-in terminal ("badgeuse"): at the start of the year, each family receives a printed QR code that parents scan at drop-off and pick-up. This paper badge is often forgotten or lost, or hard to find while carrying a child. Badge Crèche turns this QR code into an Apple Wallet pass that appears on the Lock Screen when the parent arrives at the nursery.
-Audience: parents of young children in Paris nurseries. Free, no ads, no account. Published by Christophe Amalric, president of the non-profit parents' association Parents à Paris Centre (APPC), on behalf of the association.
-
-3. HOW TO TEST (no login needed)
-Test QR code: attached image, also at https://tikris.github.io/appc-badgeuse/demo-qr.png. Show it on another screen to use the camera, or save it to Photos to import it.
-1) Tap "Créer mon badge".
-2) Location is optional and used on device only to suggest the 3 nearest nurseries. Outside Paris they are far away: pick one, or tap "Autre crèche" and choose any nursery in the list (search e.g. "Montmartre").
-3) In "QR code de la crèche", tap "Scanner le QR code" and point the camera at the test code (or "Choisir une photo ou une capture d'écran", or "Importer un fichier (PDF, image)").
-4) Optional: turn on "Afficher le nom de l'enfant" and type a first name.
-5) Tap "Enregistrer", then "Add to Apple Wallet" ("Ajouter à l'app Cartes" in French).
-The main screen then offers "Modifier le badge" and "Supprimer le badge"; the (i) button opens About. Near the nursery, iOS can suggest the pass on the Lock Screen (PassKit location relevance).
-
-4. EXTERNAL SERVICES
-No server, no third-party SDK, no analytics, no payment, no authentication service, no AI service. Apple frameworks only:
-- PassKit / Apple Wallet: the pass is generated and signed on the device;
-- Core Location: on device only, to sort nurseries by distance;
-- VisionKit / Vision: on-device QR code reading;
-- MapKit / Apple Maps: map preview of the nursery and, only if it is not in the list, address search.
-The list of Paris nurseries is bundled in the app (public directory of the City of Paris, Apur open data and OpenStreetMap, ODbL licence; addresses from the French Base Adresse Nationale, Licence Ouverte) and is never downloaded at runtime. Support and privacy pages are static pages on GitHub Pages. About links to the association's WhatsApp community.
-
-5. REGIONAL DIFFERENCES
-The app works the same in all regions. The interface is in French and the bundled list covers Paris; anywhere, the user can pick a nursery from the list or search any address with Apple Maps ("Ma crèche n'est pas dans la liste").
-
-6. REGULATED INDUSTRY / THIRD-PARTY MATERIAL
-Not a regulated industry and no protected third-party material. The QR code is the parent's own check-in code, given by their nursery for their personal use; the app stores it unchanged on the device. It does not connect to check-in terminals or their providers and does not create or alter any credential. The app is independent and not affiliated with the City of Paris or nursery operators (stated in the app and on the product page). The nursery list is open data used under the ODbL licence, with attribution in the app and on the website.
-```
+**Notes pour l'App Review** (en anglais, < 4 000 caractères ; informations demandées par Apple au titre de la règle 2.1) : dans [`AppStore/review-notes.txt`](AppStore/review-notes.txt). Le workflow « TestFlight » les envoie dans App Store Connect avec le QR code de démonstration en pièce jointe (`tools/asc_release.swift`) ; joindre aussi la vidéo.
 
 ## 4. Après la mise en ligne
 
