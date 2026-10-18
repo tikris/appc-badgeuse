@@ -282,7 +282,9 @@ def osm_rows():
         return []
     looks_like_creche = re.compile(r"cr[eè]che|creche|halte|multi.?accueil|micro|jardin d.enfants|babilou|people.?&?.?baby"
                                    r"|chaperons|maison bleue|cr[eé]chendo|evancia|grandir|tom ?pouce")
-    excluded = re.compile(r"maternelle|ecole|elementaire|loisirs|periscolaire|ludotheque|assistante|\bmam\b|\bram\b|relais")
+    excluded = re.compile(r"maternelle|ecole|elementaire|loisirs|periscolaire|ludotheque|assistante|\bmam\b|\bram\b|relais"
+                          # agences de garde à domicile, qui ne sont pas des crèches
+                          r"|kinougarde|family ?sphere|babychou|kangourou kids|yoopies|babysits|o2 |nounou|garde a domicile")
     rows = []
     for e in elements:
         tags = e.get("tags", {})
