@@ -211,7 +211,7 @@ def paris_fr_rows():
         if not title or not block:
             print("  page sans nom ni adresse :", url)
             return None
-        name = html.unescape(title.group(1)).strip()
+        name = re.sub(r"\s+", " ", html.unescape(title.group(1))).strip()
         text = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", block.group(1)))).strip()
         address = text[len(name):] if text.startswith(name) else text
         address = address.strip(" ,")
