@@ -72,8 +72,14 @@ App/BadgeCreche/
     PassSigningIdentity.swift  lecture du .p12, Pass Type ID / Team ID depuis le certificat
     DER.swift, ZipArchive.swift  encodage ASN.1 et ZIP minimalistes (aucune dépendance)
     QRCodeReader.swift       lecture du QR code (photo réduite à 2048 px, PDF), testée sur macOS
-  Services/                  stockage local, Wallet, aperçu du QR code et images du pass (mis en cache)
-  Features/                  écrans SwiftUI (accueil, éditeur, adresse, scanner, À propos)
+  Services/                  stockage local, liste des crèches (CrecheCatalog), position, Wallet et signature,
+                             aperçu du QR code et images du pass (mis en cache), statistiques facultatives
+  Features/                  écrans SwiftUI
+    Home/                    écran du badge : aperçu, ajout à Wallet, conseils
+    Editor/                  création / modification : crèche (proches, liste, adresse libre), QR code
+                             (scan, photo, fichier), écran verrouillé (distance, entrée sur la carte)
+    Shared/                  carte de la crèche, couleurs APPC, ligne d'attente
+    WelcomeView, AboutView, ScreenshotMode (captures App Store)
 docs/                        site GitHub Pages : présentation, confidentialité, mentions légales
 Tests/                       tests de signature avec une fausse chaîne de certificats
 ```

@@ -113,16 +113,10 @@ extension LockScreenDistance {
 
     var explanation: String {
         switch self {
-        case .door: "Recommandé : le badge s'affiche devant la porte. Dans une rue étroite, le GPS peut le faire attendre un peu."
-        case .street: "Le badge s'affiche en arrivant dans la rue de la crèche."
-        case .approach: "Le badge s'affiche à l'approche de la crèche, parfois un peu tôt."
+        case .door: "Le plus près possible. iOS décide du moment exact et, en ville, la position de l'iPhone varie de quelques dizaines de mètres : le badge peut apparaître un peu avant la porte."
+        case .street: "Le badge apparaît en arrivant dans la rue de la crèche."
+        case .approach: "Le badge apparaît à l'approche de la crèche : plus tôt, mais plus régulièrement."
         case .never: "Le badge ne s'affiche plus tout seul. Pour l'ouvrir : double-cliquez sur le bouton latéral."
         }
-    }
-}
-
-extension CrecheAddress {
-    var coordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }

@@ -1,7 +1,4 @@
-import AVFoundation
-import PhotosUI
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// Création / modification du badge : crèche (proposée d'après la position), QR code,
 /// et ce qui s'affiche sur le badge (noms de la crèche et de l'enfant, facultatifs).
@@ -23,10 +20,6 @@ struct BadgeEditorView: View {
     @State private var crecheChoice: (source: CrecheStat.Source, creche: Creche?)?
     @AppStorage(CrecheStats.consentKey) private var sharesCrecheStats = false
 
-    @State private var isScanning = false
-    @State private var isImportingFile = false
-    @State private var photoItem: PhotosPickerItem?
-    @State private var isReadingQRCode = false
     @State private var errorMessage: String?
 
     /// `prefill` : valeurs initiales d'un nouveau badge (captures d'écran).
@@ -57,7 +50,7 @@ struct BadgeEditorView: View {
                     crecheName = name
                     crecheChoice = (source, creche)
                 }, locatesOnAppear: existing == nil)
-                qrSection
+                QRCodeSection(payload: $qrPayload)
                 displaySection
                 if CrecheStats.isAvailable {
                     statsSection
@@ -74,16 +67,7 @@ struct BadgeEditorView: View {
                         .disabled(!canSave)
                 }
             }
-            .fullScreenCover(isPresented: $isScanning) {
-                scannerScreen
-            }
-            .fileImporter(isPresented: $isImportingFile, allowedContentTypes: [.image, .pdf]) { result in
-                importFile(result)
-            }
-            .onChange(of: photoItem) { _, item in
-                importPhoto(item)
-            }
-            .alert("Oups", isPresented: errorIsPresented) {
+            .alert("Enregistrement impossible", isPresented: errorIsPresented) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(errorMessage ?? "")
@@ -92,49 +76,6 @@ struct BadgeEditorView: View {
     }
 
     // MARK: Sections
-
-    private var qrSection: some View {
-        Section {
-            if let qrPayload {
-                HStack(spacing: 16) {
-                    QRCodePreview(payload: qrPayload)
-                        .frame(width: 88, height: 88)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label("QR code prêt", systemImage: "checkmark.circle.fill")
-                            .font(.headline)
-                            .foregroundStyle(.green)
-                        Text(qrPayload)
-                            .font(.caption.monospaced())
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .truncationMode(.middle)
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-            if isReadingQRCode {
-                HStack(spacing: 12) {
-                    ProgressView()
-                    Text("Lecture du QR code…")
-                }
-            }
-            Button(action: startScanning) {
-                Label(qrPayload == nil ? "Scanner le QR code" : "Scanner à nouveau", systemImage: "qrcode.viewfinder")
-            }
-            PhotosPicker(selection: $photoItem, matching: .images) {
-                Label("Choisir une photo ou une capture d'écran", systemImage: "photo.on.rectangle")
-            }
-            Button {
-                isImportingFile = true
-            } label: {
-                Label("Importer un fichier (PDF, image)", systemImage: "doc.viewfinder")
-            }
-        } header: {
-            Text("QR code de la crèche")
-        } footer: {
-            Text("Le QR code remis par la crèche en début d'année. Il est reproduit à l'identique dans votre badge.")
-        }
-    }
 
     private var displaySection: some View {
         Section {
@@ -169,90 +110,11 @@ struct BadgeEditorView: View {
         }
     }
 
-    private var scannerScreen: some View {
-        NavigationStack {
-            QRScannerView { payload in
-                qrPayload = payload
-                isScanning = false
-            }
-            .ignoresSafeArea()
-            .navigationTitle("Scannez le QR code")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Annuler") { isScanning = false }
-                }
-            }
-        }
-    }
-
     private var errorIsPresented: Binding<Bool> {
         Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
     }
 
     // MARK: Actions
-
-    private func startScanning() {
-        let deniedMessage = "Autorisez l'appareil photo dans Réglages > \(AppConfig.appName), ou importez une photo du QR code."
-        guard QRScannerView.isSupported else {
-            errorMessage = "Le scan en direct n'est pas disponible sur cet appareil. Importez plutôt une photo ou une capture d'écran du QR code."
-            return
-        }
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
-        case .authorized:
-            isScanning = true
-        case .notDetermined:
-            Task {
-                if await AVCaptureDevice.requestAccess(for: .video) {
-                    isScanning = true
-                } else {
-                    errorMessage = deniedMessage
-                }
-            }
-        default:
-            errorMessage = deniedMessage
-        }
-    }
-
-    private func importPhoto(_ item: PhotosPickerItem?) {
-        guard let item else { return }
-        photoItem = nil
-        isReadingQRCode = true
-        Task {
-            defer { isReadingQRCode = false }
-            do {
-                guard let data = try await item.loadTransferable(type: Data.self) else {
-                    throw QRCodeReaderError.unreadableFile
-                }
-                qrPayload = try await QRCodeReader.payload(in: data)
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
-    }
-
-    private func importFile(_ result: Result<URL, Error>) {
-        do {
-            let url = try result.get()
-            let isAccessing = url.startAccessingSecurityScopedResource()
-            defer {
-                if isAccessing { url.stopAccessingSecurityScopedResource() }
-            }
-            let data = try Data(contentsOf: url)
-            isReadingQRCode = true
-            Task {
-                defer { isReadingQRCode = false }
-                do {
-                    qrPayload = try await QRCodeReader.payload(in: data)
-                } catch {
-                    errorMessage = error.localizedDescription
-                }
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
 
     private func save() {
         guard let qrPayload, let address else { return }
