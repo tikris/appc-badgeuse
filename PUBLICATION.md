@@ -45,6 +45,8 @@ Le workflow archive, signe et envoie le build sur TestFlight, puis les captures 
 | `APPSTORE_PROFILE` | developer.apple.com → *Profiles* → « + » → *App Store Connect* → App ID `fr.parentsapariscentre.badgecreche` → ce certificat Apple Distribution → *Generate* → *Download* | `base64 -i Badge_Creche.mobileprovision \| pbcopy` |
 | `PASS_CERTIFICATE_P12`, `PASS_CERTIFICATE_PASSWORD` | `App/BadgeCreche/PassCertificate.p12` et le mot de passe de `PassSigning.plist` | `base64 -i App/BadgeCreche/PassCertificate.p12 \| pbcopy` |
 
+Plus sûr pour les quatre secrets des certificats : `bash tools/secrets_signature.sh [Distribution.p12]`, depuis le dossier du projet. Le script vérifie que chaque `.p12` s'ouvre avec son mot de passe (comme le workflow), puis envoie les secrets avec GitHub CLI (`gh`) s'il est connecté, ou les copie un par un dans le presse-papiers.
+
 Le numéro de build est celui du projet (`CURRENT_PROJECT_VERSION`), ou celui saisi au lancement. Le build apparaît dans TestFlight après le traitement d'Apple (10 à 30 min).
 
 ## 3. Fiche App Store Connect
