@@ -74,7 +74,10 @@ jobs:
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security import "$RUNNER_TEMP/distribution.p12" -P "$DIST_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          # Retour à la ligne final (touche Entrée dans le champ du secret) : ignoré.
+          DIST_PASSWORD=$(printf '%s' "$DIST_CERTIFICATE_PASSWORD" | tr -d '\r\n')
+          security import "$RUNNER_TEMP/distribution.p12" -P "$DIST_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN" \
+            || { echo "::error::DIST_CERTIFICATE_PASSWORD n'ouvre pas DIST_CERTIFICATE_P12 (mot de passe ou fichier .p12 différent)"; exit 1; }
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
           security list-keychain -d user -s "$KEYCHAIN"
           security find-identity -v -p codesigning "$KEYCHAIN"
@@ -93,10 +96,12 @@ jobs:
           set -euo pipefail
           echo -n "$PASS_CERTIFICATE_P12" | base64 --decode -o App/BadgeCreche/PassCertificate.p12
           plutil -create xml1 App/BadgeCreche/PassSigning.plist
-          plutil -insert CertificatePassword -string "$PASS_CERTIFICATE_PASSWORD" App/BadgeCreche/PassSigning.plist
+          PASS_PASSWORD=$(printf '%s' "$PASS_CERTIFICATE_PASSWORD" | tr -d '\r\n')
+          plutil -insert CertificatePassword -string "$PASS_PASSWORD" App/BadgeCreche/PassSigning.plist
           curl -fsSL https://www.apple.com/certificateauthority/AppleWWDRCAG4.cer -o App/BadgeCreche/AppleWWDRCAG4.cer
           # Un mauvais mot de passe ferait un build incapable de créer les badges : on s'arrête ici.
-          security import App/BadgeCreche/PassCertificate.p12 -P "$PASS_CERTIFICATE_PASSWORD" -f pkcs12 -k "$KEYCHAIN" > /dev/null
+          security import App/BadgeCreche/PassCertificate.p12 -P "$PASS_PASSWORD" -f pkcs12 -k "$KEYCHAIN" > /dev/null \
+            || { echo "::error::PASS_CERTIFICATE_PASSWORD n'ouvre pas PASS_CERTIFICATE_P12 (mot de passe ou fichier .p12 différent)"; exit 1; }
       - name: Clé API App Store Connect
         run: |
           mkdir -p "$RUNNER_TEMP/keys"
