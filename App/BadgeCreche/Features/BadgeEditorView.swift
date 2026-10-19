@@ -18,6 +18,7 @@ struct BadgeEditorView: View {
     @State private var showsCrecheName: Bool
     @State private var crecheName: String
     @State private var address: CrecheAddress?
+    @State private var lockScreenDistance: LockScreenDistance
     /// Pour les statistiques facultatives : comment la crèche a été choisie pendant cette édition.
     @State private var crecheChoice: (source: CrecheStat.Source, creche: Creche?)?
     @AppStorage(CrecheStats.consentKey) private var sharesCrecheStats = false
@@ -42,6 +43,7 @@ struct BadgeEditorView: View {
         _crecheName = State(initialValue: storedName.isEmpty ? (existing?.address.name ?? "") : storedName)
         // Pour un nouveau badge, la crèche est choisie d'après la position (pas de préremplissage).
         _address = State(initialValue: existing?.address)
+        _lockScreenDistance = State(initialValue: existing?.lockScreenDistance ?? .standard)
     }
 
     private var canSave: Bool {
@@ -51,7 +53,7 @@ struct BadgeEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                CrecheSection(address: $address, onSelect: { name, source, creche in
+                CrecheSection(address: $address, lockScreenDistance: $lockScreenDistance, onSelect: { name, source, creche in
                     crecheName = name
                     crecheChoice = (source, creche)
                 }, locatesOnAppear: existing == nil)
@@ -258,7 +260,7 @@ struct BadgeEditorView: View {
         let lastName = childLastName.trimmingCharacters(in: .whitespacesAndNewlines)
         // Minimisation : le nom n'est conservé que si le parent a choisi de l'afficher.
         let keepsName = showsChildName && !(firstName.isEmpty && lastName.isEmpty)
-        let badge = BadgeData(
+        var badge = BadgeData(
             serialNumber: existing?.serialNumber ?? UUID().uuidString,
             qrPayload: qrPayload,
             showsChildName: keepsName,
@@ -268,6 +270,7 @@ struct BadgeEditorView: View {
             address: address,
             updatedAt: Date()
         )
+        badge.lockScreenDistance = lockScreenDistance
         do {
             try onSave(badge)
             if let crecheChoice, existing?.address != address {

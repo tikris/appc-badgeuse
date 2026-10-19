@@ -12,7 +12,7 @@ Test QR code: attached image, also at https://tikris.github.io/appc-badgeuse/dem
 3) In "QR code de la crèche", tap "Scanner le QR code" and point the camera at the test code (or "Choisir une photo ou une capture d'écran", or "Importer un fichier (PDF, image)").
 4) Optional: turn on "Afficher le nom de l'enfant" and type a first name.
 5) Tap "Enregistrer", then "Add to Apple Wallet" ("Ajouter à l'app Cartes" in French).
-The main screen then offers "Modifier le badge" and "Supprimer le badge"; the (i) button opens About. Near the nursery, iOS can suggest the pass on the Lock Screen (PassKit location relevance).
+The main screen then offers "Modifier le badge" and "Supprimer le badge"; the (i) button opens About. Near the nursery, iOS can suggest the pass on the Lock Screen (PassKit location relevance). In "Modifier le badge", the "Écran verrouillé" row sets that distance (10, 25 or 50 m, or never) and lets the parent tap the exact entrance on a map; this stays on the device.
 
 4. EXTERNAL SERVICES
 No server, no third-party SDK, no analytics, no payment, no authentication service, no AI service. Apple frameworks only:

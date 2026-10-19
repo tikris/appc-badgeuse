@@ -36,6 +36,8 @@ final class CrecheCatalog {
 /// Choix de la crèche : les 3 plus proches de la position, sinon la liste complète.
 struct CrecheSection: View {
     @Binding var address: CrecheAddress?
+    /// Distance d'affichage sur l'écran verrouillé, réglée avec l'emplacement de l'entrée.
+    @Binding var lockScreenDistance: LockScreenDistance
     /// Appelé avec le nom de la crèche choisie (pour préremplir le nom affiché sur le badge), la façon
     /// dont elle l'a été et la crèche de la liste (statistiques facultatives, voir CrecheStat).
     let onSelect: (_ name: String, _ source: CrecheStat.Source, _ creche: Creche?) -> Void
@@ -45,11 +47,12 @@ struct CrecheSection: View {
     @StateObject private var location = LocationProvider()
     /// Les 3 plus proches, calculées une fois par position (nil pendant le calcul).
     @State private var nearby: [NearbyCreche]?
+    @State private var isEditingLockScreen = false
 
     var body: some View {
         Section {
             if let address {
-                AddressMap(address: address)
+                AddressMap(address: address, distance: lockScreenDistance)
                     .frame(height: 150)
                     .listRowInsets(EdgeInsets())
                 VStack(alignment: .leading, spacing: 2) {
@@ -58,6 +61,21 @@ struct CrecheSection: View {
                     Text(address.label)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                }
+                Button {
+                    isEditingLockScreen = true
+                } label: {
+                    LabeledContent {
+                        Text(lockScreenDistance.title)
+                    } label: {
+                        Label("Écran verrouillé", systemImage: "lock.iphone")
+                    }
+                }
+                .sheet(isPresented: $isEditingLockScreen) {
+                    LockScreenSettingsView(address: address, distance: lockScreenDistance) { newAddress, newDistance in
+                        self.address = newAddress
+                        lockScreenDistance = newDistance
+                    }
                 }
                 Button("Choisir une autre crèche") {
                     self.address = nil
@@ -74,7 +92,7 @@ struct CrecheSection: View {
         } header: {
             Text("Votre crèche")
         } footer: {
-            Text("Votre position sert uniquement à trier les crèches, sur l'iPhone : elle n'est ni enregistrée ni transmise. Le badge s'affichera sur l'écran verrouillé devant la crèche (à \(PassBuilder.relevantDistance) m maximum).")
+            footer
         }
         .onAppear {
             if locatesOnAppear, address == nil, location.status == .idle {
@@ -89,6 +107,16 @@ struct CrecheSection: View {
             nearby = nil
             nearby = await CrecheCatalog.shared.load()?.nearest(latitude: latitude, longitude: longitude) ?? []
         }
+    }
+
+    private var footer: Text {
+        guard address != nil else {
+            return Text("Votre position sert uniquement à trier les crèches, sur l'iPhone : elle n'est ni enregistrée ni transmise. Le badge s'affichera sur l'écran verrouillé devant la crèche.")
+        }
+        guard let meters = lockScreenDistance.meters else {
+            return Text("Le badge ne s'affiche pas tout seul sur l'écran verrouillé.")
+        }
+        return Text("Le badge s'affiche sur l'écran verrouillé à \(meters) m maximum de l'entrée. « Écran verrouillé » : changer la distance ou placer l'entrée sur la carte.")
     }
 
     @ViewBuilder
