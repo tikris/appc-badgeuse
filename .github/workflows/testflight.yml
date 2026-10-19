@@ -69,8 +69,11 @@ jobs:
           set -euo pipefail
           KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
           KEYCHAIN_PASSWORD=$(openssl rand -hex 16)
-          echo -n "$DIST_CERTIFICATE_P12" | base64 --decode -o "$RUNNER_TEMP/distribution.p12"
-          echo -n "$APPSTORE_PROFILE" | base64 --decode -o "$RUNNER_TEMP/appstore.mobileprovision"
+          # Espaces ou retours à la ligne collés avec le base64 : retirés avant décodage.
+          printf '%s' "$DIST_CERTIFICATE_P12" | tr -d ' \t\r\n' | base64 --decode -o "$RUNNER_TEMP/distribution.p12"
+          printf '%s' "$APPSTORE_PROFILE" | tr -d ' \t\r\n' | base64 --decode -o "$RUNNER_TEMP/appstore.mobileprovision"
+          # Tailles à comparer avec les fichiers d'origine (wc -c < fichier) en cas d'échec d'import.
+          echo "DIST_CERTIFICATE_P12 décodé : $(wc -c < "$RUNNER_TEMP/distribution.p12" | tr -d ' ') octets"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
@@ -94,7 +97,8 @@ jobs:
       - name: Certificat Wallet embarqué dans l'app (jamais commité)
         run: |
           set -euo pipefail
-          echo -n "$PASS_CERTIFICATE_P12" | base64 --decode -o App/BadgeCreche/PassCertificate.p12
+          printf '%s' "$PASS_CERTIFICATE_P12" | tr -d ' \t\r\n' | base64 --decode -o App/BadgeCreche/PassCertificate.p12
+          echo "PASS_CERTIFICATE_P12 décodé : $(wc -c < App/BadgeCreche/PassCertificate.p12 | tr -d ' ') octets"
           plutil -create xml1 App/BadgeCreche/PassSigning.plist
           PASS_PASSWORD=$(printf '%s' "$PASS_CERTIFICATE_PASSWORD" | tr -d '\r\n')
           plutil -insert CertificatePassword -string "$PASS_PASSWORD" App/BadgeCreche/PassSigning.plist
