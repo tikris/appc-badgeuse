@@ -113,7 +113,8 @@ def raw_street(p):
     liaison = "" if len(liaison) <= 1 and liaison != "d" else liaison
     name = title_case(str(p.get("l_voie") or ""))
     parts = [f"{number}{suffix}" if number else "", designation, liaison, name]
-    return re.sub(r"\s+", " ", " ".join(x for x in parts if x)).replace("d ", "d'").strip()
+    # « rue d Alésia » → « rue d'Alésia », sans toucher aux mots finissant par d (« Raymond Losserand »).
+    return re.sub(r"\bd ", "d'", re.sub(r"\s+", " ", " ".join(x for x in parts if x))).strip()
 
 
 def kind_of(name):
@@ -285,14 +286,18 @@ def apur_rows():
     return rows
 
 
-def previous_osm_rows(path):
-    """Si aucun serveur Overpass ne répond, reprend les entrées OpenStreetMap de la liste précédente."""
+def previous_creches(path):
+    """Liste précédente, par référence (vide si absente ou illisible)."""
     try:
-        previous = json.loads(path.read_text(encoding="utf-8"))["creches"]
+        return {c["id"]: c for c in json.loads(path.read_text(encoding="utf-8"))["creches"]}
     except (OSError, ValueError, KeyError):
-        return []
+        return {}
+
+
+def previous_osm_rows(previous):
+    """Si aucun serveur Overpass ne répond, reprend les entrées OpenStreetMap de la liste précédente."""
     rows = []
-    for c in previous:
+    for c in previous.values():
         if c.get("src") == "osm":
             rows.append({"id": c["id"], "source_name": c["name"], "raw_address": c["street"], "street": c["street"],
                          "citycode": "", "postcode": c["postcode"], "management": c["management"],
@@ -437,6 +442,7 @@ def kind_of_row(row):
 
 def main():
     output = Path(sys.argv[1]) if len(sys.argv) > 1 else OUTPUT
+    previous = previous_creches(output)
     paris = paris_fr_rows()
     try:
         apur = apur_rows()
@@ -446,7 +452,7 @@ def main():
     osm = osm_rows()
     osm_from_previous = not osm
     if osm_from_previous:
-        osm = previous_osm_rows(output)
+        osm = previous_osm_rows(previous)
 
     # Adresses normalisées et coordonnées du point d'adresse (BAN) pour paris.fr et l'Apur.
     try:
@@ -454,18 +460,27 @@ def main():
     except Exception as error:  # noqa: BLE001
         print("BAN indisponible, adresses brutes conservées :", error)
         normalized = {}
-    fallback = 0
+    fallback = kept = 0
     for row in paris + apur:
         if row["id"] in normalized:
             row["street"], row["postcode"], lat, lon = normalized[row["id"]]
             if row["src"] == "paris.fr":
                 row["lat"], row["lon"] = round(lat, 6), round(lon, 6)
+        elif row["id"] in previous:
+            # La BAN ne reconnaît pas toujours les mêmes adresses d'un lot à l'autre : l'adresse
+            # de la liste précédente est gardée plutôt que l'adresse brute (nom de la crèche stable).
+            old = previous[row["id"]]
+            row["street"], row["postcode"] = old["street"], old["postcode"]
+            if row["src"] == "paris.fr":
+                row["lat"], row["lon"] = old["lat"], old["lon"]
+            kept += 1
         else:
             row["street"] = row["raw_address"]
             if row["src"] == "paris.fr":
                 row["lat"], row["lon"] = row["page_lat"], row["page_lon"]
                 fallback += 1
-    print(f"BAN : {len(normalized)} adresses normalisées ; paris.fr sans adresse reconnue (coordonnées de la page) : {fallback}")
+    print(f"BAN : {len(normalized)} adresses normalisées ; {kept} reprises de la liste précédente ; "
+          f"paris.fr sans adresse reconnue (coordonnées de la page) : {fallback}")
 
     # OpenStreetMap : adresse des tags, sinon géocodage inverse.
     try:
