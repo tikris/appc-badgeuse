@@ -16,6 +16,7 @@ struct CrecheSection: View {
     /// Les 3 plus proches, calculées une fois par position (nil pendant le calcul).
     @State private var nearby: [NearbyCreche]?
     @State private var isEditingLockScreen = false
+    @State private var isSuggestingName = false
 
     private static let searchingText = "Recherche des crèches proches…"
 
@@ -79,6 +80,14 @@ struct CrecheSection: View {
                 self.address = newAddress
                 lockScreenDistance = newDistance
             }
+        }
+        Button {
+            isSuggestingName = true
+        } label: {
+            Label("Proposer le nom utilisé par les parents", systemImage: "square.and.pencil")
+        }
+        .sheet(isPresented: $isSuggestingName) {
+            CrecheNameSuggestionView(address: address)
         }
         Button("Choisir une autre crèche") {
             self.address = nil

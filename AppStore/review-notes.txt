@@ -20,7 +20,7 @@ No server, no third-party SDK, no analytics, no payment, no authentication servi
 - Core Location: on device only, to sort nurseries by distance;
 - VisionKit / Vision: on-device QR code reading;
 - MapKit / Apple Maps: map preview of the nursery and, only if it is not in the list, address search.
-The list of Paris nurseries is bundled in the app (public directory of the City of Paris, Apur open data and OpenStreetMap, ODbL licence; addresses from the French Base Adresse Nationale, Licence Ouverte) and is never downloaded at runtime. Support and privacy pages are static pages on GitHub Pages. About links to the association's WhatsApp community.
+The list of Paris nurseries is bundled in the app (public directory of the City of Paris, Apur open data and OpenStreetMap, ODbL licence; addresses from the French Base Adresse Nationale, Licence Ouverte) and is never downloaded at runtime. Support and privacy pages are static pages on GitHub Pages. About links to the association's WhatsApp community. "Proposer le nom utilisé par les parents" only opens the user's own Mail app with a prefilled message.
 
 5. REGIONAL DIFFERENCES
 The app works the same in all regions. The interface is in French and the bundled list covers Paris; anywhere, the user can pick a nursery from the list or search any address with Apple Maps ("Ma crèche n'est pas dans la liste").

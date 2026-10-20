@@ -57,6 +57,8 @@ BRANDS = [
     (re.compile(r"(la )?maison bleue"), "La Maison Bleue"),
 ]
 OUTPUT = Path(__file__).resolve().parent.parent / "App" / "BadgeCreche" / "Resources" / "creches-paris.json"
+# Noms d'usage validés par l'APPC (proposés par les parents depuis l'application) : prioritaires.
+NAMES = Path(__file__).resolve().parent / "creches-noms.csv"
 USER_AGENT = "appc-badgeuse (https://github.com/tikris/appc-badgeuse)"
 
 DESIGNATIONS = {
@@ -410,6 +412,21 @@ def display_name(name, street):
     return name[:1].upper() + name[1:]
 
 
+def usage_names(path):
+    """« référence;nom » par ligne ; lignes vides, commentaires (#) et en-tête ignorés."""
+    names = {}
+    if not path.exists():
+        return names
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        reference, _, name = line.partition(";")
+        reference, name = reference.strip(), name.strip()
+        if reference and name and reference != "reference":
+            names[reference] = name
+    return names
+
+
 def kind_of_row(row):
     """Catégorie du nom d'usage s'il en indique une, sinon celle du nom générique d'origine."""
     kind = kind_of(row["source_name"])
@@ -467,6 +484,7 @@ def main():
 
     rows = merge([("paris.fr", paris), ("Apur", apur), ("OpenStreetMap", osm)])
 
+    validated = usage_names(NAMES)
     creches = []
     for row in rows:
         street, postcode = row["street"], row["postcode"]
@@ -474,7 +492,11 @@ def main():
             continue
         kind = kind_of_row(row)
         name = row["source_name"]
-        if is_generic(name):
+        if row["id"] in validated:
+            name = validated[row["id"]]
+            if kind_of(name) != "Crèche":
+                kind = kind_of(name)
+        elif is_generic(name):
             street_name = re.sub(r"^\d+\s*(bis|ter|quater)?\s*", "", street).strip()
             name = f"{kind} {street_name[:1].lower()}{street_name[1:]}" if street_name else kind
         else:
@@ -484,6 +506,9 @@ def main():
             "street": street, "postcode": postcode, "lat": row["lat"], "lon": row["lon"], "src": row["src"],
         })
     creches.sort(key=lambda c: (c["postcode"], fold(c["name"])))
+    unknown = set(validated) - {c["id"] for c in creches}
+    print(f"Noms d'usage validés (tools/creches-noms.csv) : {len(validated) - len(unknown)} appliqué(s)"
+          + (f", références inconnues : {sorted(unknown)}" if unknown else ""))
 
     document = {
         "source": "Ville de Paris (annuaire des lieux de paris.fr), Apur (« Équipements ponctuels – Petite enfance »), "
