@@ -44,6 +44,10 @@ OVERPASS = [
     "https://overpass.kumi.systems/api/interpreter",
 ]
 DUPLICATE_METERS = 60
+# Reprise d'un nom d'usage (OpenStreetMap) pour un établissement au nom générique : même adresse ou très proche.
+NAME_METERS = 30
+# Ni crèche ni halte-garderie, même si OpenStreetMap les classe en « childcare ».
+NOT_A_CRECHE = re.compile(r"\bpmi\b|protection (maternelle|infantile)")
 OUTPUT = Path(__file__).resolve().parent.parent / "App" / "BadgeCreche" / "Resources" / "creches-paris.json"
 USER_AGENT = "appc-badgeuse (https://github.com/tikris/appc-badgeuse)"
 
@@ -313,7 +317,7 @@ def osm_rows():
         name = tags["name"].strip()
         folded = fold(name)
         kind_fr = tags.get("kindergarten:FR", "")
-        if excluded.search(folded) and not looks_like_creche.search(folded):
+        if (excluded.search(folded) and not looks_like_creche.search(folded)) or NOT_A_CRECHE.search(folded):
             continue
         if not (tags["amenity"] == "childcare" or "crèche" in kind_fr or "halte" in kind_fr or looks_like_creche.search(folded)):
             continue
@@ -347,27 +351,49 @@ def significant_words(name):
 
 def merge(sources):
     """Garde la première source pour chaque établissement : les suivantes ne complètent que les manques
-    (doublon : même adresse, moins de 60 m, ou moins de 150 m avec un nom en commun)."""
+    (doublon : même adresse, moins de 60 m, ou moins de 150 m avec un nom en commun).
+    Un doublon apporte toutefois son nom quand l'établissement retenu n'a qu'un nom générique
+    (« Crèche » à l'Apur) : c'est le nom d'usage, celui que les parents cherchent."""
     kept = []
     for label, rows in sources:
         previous = list(kept)  # pas de dédoublonnage à l'intérieur d'une même source
-        added = 0
+        added = renamed = 0
         for row in rows:
             if row["lat"] is None:
                 continue
             row["words"] = significant_words(row["source_name"])
             row["address_key"] = (fold(row["street"]).replace("-", " "), row["postcode"])
-            duplicate = any(
-                row["address_key"] == other["address_key"]
+            match = next((
+                other for other in previous
+                if row["address_key"] == other["address_key"]
                 or (d := distance(row, other)) < DUPLICATE_METERS
                 or (d < 150 and row["words"] & other["words"])
-                for other in previous
-            )
-            if not duplicate:
+            ), None)
+            if match is None:
                 kept.append(row)
                 added += 1
-        print(f"Fusion : {label} apporte {added} établissement(s) sur {len(rows)}")
+            elif usage_name_applies(row, match):
+                match.setdefault("generic_name", match["source_name"])
+                match["source_name"] = row["source_name"]
+                renamed += 1
+        print(f"Fusion : {label} apporte {added} établissement(s) sur {len(rows)}, et {renamed} nom(s) d'usage")
     return kept
+
+
+def usage_name_applies(row, match):
+    """Nom d'usage repris d'un doublon : seulement s'il est précis et à la même adresse (ou à moins de
+    NAME_METERS), pour ne pas donner à une crèche le nom de sa voisine."""
+    if not is_generic(match["source_name"]) or is_generic(row["source_name"]) or NOT_A_CRECHE.search(fold(row["source_name"])):
+        return False
+    return row["address_key"] == match["address_key"] or distance(row, match) < NAME_METERS
+
+
+def kind_of_row(row):
+    """Catégorie du nom d'usage s'il en indique une, sinon celle du nom générique d'origine."""
+    kind = kind_of(row["source_name"])
+    if kind == "Crèche" and row.get("generic_name"):
+        return kind_of(row["generic_name"])
+    return kind
 
 
 def main():
@@ -424,7 +450,7 @@ def main():
         street, postcode = row["street"], row["postcode"]
         if not street or not postcode.startswith("75"):
             continue
-        kind = kind_of(row["source_name"])
+        kind = kind_of_row(row)
         name = row["source_name"]
         if is_generic(name):
             street_name = re.sub(r"^\d+\s*(bis|ter|quater)?\s*", "", street).strip()
@@ -449,6 +475,8 @@ def main():
     print("Sources :", Counter(c["src"] for c in creches))
     print("Types :", Counter(c["kind"] for c in creches))
     print("Gestion :", Counter(c["management"] for c in creches))
+    generic = sum(1 for c in creches if re.match(r"^\S+ (rue|avenue|boulevard|place|quai|passage|villa|impasse|square|cite|allee)\b", fold(c["name"])))
+    print(f"Noms génériques restants (« Crèche rue … ») : {generic} sur {len(creches)}")
     print("Contrôle « Grange aux Belles » :", [c for c in creches if "grange aux belles" in fold(c["name"] + " " + c["street"]).replace("-", " ")])
     print("Exemples :")
     for creche in creches[::max(1, len(creches) // 15)]:

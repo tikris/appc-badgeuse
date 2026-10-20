@@ -99,13 +99,32 @@ nonisolated struct CrecheDirectory {
 
     /// Recherche sans accents, majuscules ni ponctuation ; chaque mot doit apparaître (nom, rue,
     /// code postal, arrondissement). Un pluriel est toléré : « granges » trouve « Grange aux Belles ».
+    /// Les mots de catégorie ou de liaison sont facultatifs, car le nom officiel ne reprend pas toujours
+    /// le nom d'usage : « halte garderie Montmartre » trouve aussi « Crèche rue Montmartre ».
+    /// Les crèches qui contiennent tous les mots passent en premier.
     func search(_ query: String) -> [Creche] {
         let terms = Self.fold(query).split(separator: " ").map(String.init)
         guard !terms.isEmpty else { return creches }
-        return zip(creches, searchKeys)
-            .filter { _, key in terms.allSatisfy { Self.key(key, contains: $0) } }
-            .map(\.0)
+        let significant = terms.filter { !Self.optionalTerms.contains($0) }
+        let required = significant.isEmpty ? terms : significant
+        var complete: [Creche] = []
+        var partial: [Creche] = []
+        for (creche, key) in zip(creches, searchKeys) where required.allSatisfy({ Self.key(key, contains: $0) }) {
+            if terms.allSatisfy({ Self.key(key, contains: $0) }) {
+                complete.append(creche)
+            } else {
+                partial.append(creche)
+            }
+        }
+        return complete + partial
     }
+
+    /// Mots qui n'écartent jamais une crèche à eux seuls (sauf s'ils sont seuls dans la recherche).
+    private static let optionalTerms: Set<String> = [
+        "creche", "creches", "halte", "haltes", "garderie", "garderies", "multi", "accueil", "micro",
+        "jardin", "jardins", "enfant", "enfants", "municipale", "municipal", "associative", "associatif",
+        "parentale", "familiale", "collective", "de", "du", "des", "d", "la", "le", "les", "l", "aux", "au", "et",
+    ]
 
     private static func key(_ key: String, contains term: String) -> Bool {
         if key.contains(term) { return true }
