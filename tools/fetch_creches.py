@@ -47,7 +47,15 @@ DUPLICATE_METERS = 60
 # Reprise d'un nom d'usage (OpenStreetMap) pour un établissement au nom générique : même adresse ou très proche.
 NAME_METERS = 30
 # Ni crèche ni halte-garderie, même si OpenStreetMap les classe en « childcare ».
-NOT_A_CRECHE = re.compile(r"\bpmi\b|protection (maternelle|infantile)")
+NOT_A_CRECHE = re.compile(r"\bpmi\b|protection (maternelle|infantile)|\bgym\b")
+# Réseaux de crèches privées : leur nom seul (« Babilou ») ne distingue pas un établissement d'un autre.
+BRANDS = [
+    (re.compile(r"babilou"), "Babilou"),
+    (re.compile(r"people\s*&\s*baby"), "People & Baby"),
+    (re.compile(r"(les )?petits chaperons rouges"), "Les Petits Chaperons Rouges"),
+    (re.compile(r"liveli"), "Liveli"),
+    (re.compile(r"(la )?maison bleue"), "La Maison Bleue"),
+]
 OUTPUT = Path(__file__).resolve().parent.parent / "App" / "BadgeCreche" / "Resources" / "creches-paris.json"
 USER_AGENT = "appc-badgeuse (https://github.com/tikris/appc-badgeuse)"
 
@@ -388,6 +396,20 @@ def usage_name_applies(row, match):
     return row["address_key"] == match["address_key"] or distance(row, match) < NAME_METERS
 
 
+def display_name(name, street):
+    """Nom affiché : réseau seul complété par la rue (« Babilou rue des Dames »), réseau écrit de façon
+    homogène, première lettre en majuscule."""
+    folded = fold(name)
+    for pattern, brand in BRANDS:
+        if pattern.search(folded):
+            rest = pattern.sub(" ", folded)
+            if not significant_words(rest) - {"inter", "entreprises", "entreprise", "paris"}:
+                street_name = re.sub(r"^\d+\s*(bis|ter|quater)?\s*", "", street).strip()
+                return f"{brand} {street_name[:1].lower()}{street_name[1:]}".strip()
+            break
+    return name[:1].upper() + name[1:]
+
+
 def kind_of_row(row):
     """Catégorie du nom d'usage s'il en indique une, sinon celle du nom générique d'origine."""
     kind = kind_of(row["source_name"])
@@ -455,6 +477,8 @@ def main():
         if is_generic(name):
             street_name = re.sub(r"^\d+\s*(bis|ter|quater)?\s*", "", street).strip()
             name = f"{kind} {street_name[:1].lower()}{street_name[1:]}" if street_name else kind
+        else:
+            name = display_name(name, street)
         creches.append({
             "id": row["id"], "name": name, "kind": kind, "management": row["management"],
             "street": street, "postcode": postcode, "lat": row["lat"], "lon": row["lon"], "src": row["src"],
