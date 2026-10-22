@@ -9,6 +9,7 @@ on:
     branches-ignore: [main]
     paths:
       - "tools/fetch_creches.py"
+      - "tools/creches-noms.csv"
       - ".github/workflows/creches.yml"
 
 jobs:

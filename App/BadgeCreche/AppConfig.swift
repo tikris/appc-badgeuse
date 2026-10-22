@@ -19,6 +19,9 @@ enum AppConfig {
     // MARK: Mentions légales
 
     static let contactEmail = "christophe.amalric@appc.paris"
+    /// Reçoit les noms d'usage proposés par les parents (à reporter dans tools/creches-noms.csv).
+    /// Une adresse dédiée, par exemple « badge@appc.paris », faciliterait le tri.
+    static let suggestionsEmail = contactEmail
     static let legalSeat = "6, rue Montmartre, 75001 Paris"
     // À mettre à jour (ici et dans docs/mentions-legales.html) dès réception du numéro RNA.
     static let legalRegistration = "Association loi 1901 – n° RNA en cours d'attribution"

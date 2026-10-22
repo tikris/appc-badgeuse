@@ -33,6 +33,17 @@ final class CrecheDirectoryTests: XCTestCase {
         XCTAssertTrue(directory.search("introuvable").isEmpty)
     }
 
+    /// Retour d'un parent : sa halte-garderie figurait sous un autre nom et semblait absente.
+    func testCategoryWordsDoNotHideACreche() throws {
+        let directory = try sample()
+        XCTAssertEqual(directory.search("halte garderie Lauzin").map(\.id), ["1"])
+        XCTAssertEqual(directory.search("crèche municipale de l'Aqueduc").map(\.id), ["3"])
+        // Seuls, les mots de catégorie restent des critères.
+        XCTAssertEqual(directory.search("halte").map(\.id), ["3"])
+        // Tout correspond à « arrondissement » ; la halte-garderie passe en tête.
+        XCTAssertEqual(directory.search("halte garderie arrondissement").map(\.id), ["3", "1", "2", "4", "5"])
+    }
+
     func testArrondissementAndAddress() throws {
         let creches = try sample().creches
         XCTAssertEqual(creches[3].arrondissement, "1er arrondissement")
@@ -73,6 +84,8 @@ final class CrecheDirectoryTests: XCTestCase {
         // Crèche témoin signalée par un parent, cherchée comme il l'a écrite.
         let grange = directory.search("Granges aux belles")
         XCTAssertTrue(grange.contains { $0.postcode == "75010" && $0.name.contains("Grange aux belles") }, "\(grange.map(\.name))")
+        let montmartre = directory.search("halte garderie Montmartre")
+        XCTAssertTrue(montmartre.contains { $0.postcode == "75002" && $0.kind == "Halte-garderie" }, "\(montmartre.map(\.name))")
         print("Liste embarquée : \(directory.creches.count) établissements (\(directory.generated))")
     }
 }

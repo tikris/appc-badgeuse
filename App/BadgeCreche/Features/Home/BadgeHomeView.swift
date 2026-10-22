@@ -108,7 +108,11 @@ struct BadgeHomeView: View {
 
     private var tips: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("Le badge s'affiche sur l'écran verrouillé à \(PassBuilder.relevantDistance) m maximum de la crèche (Service de localisation activé).", systemImage: "location")
+            if let meters = badge.lockScreenDistance.meters {
+                Label("Le badge s'affiche sur l'écran verrouillé à \(meters) m maximum de la crèche (Service de localisation activé).", systemImage: "location")
+            } else {
+                Label("Affichage automatique sur l'écran verrouillé désactivé : à réactiver dans « Modifier le badge ».", systemImage: "location.slash")
+            }
             Label("À tout moment : double-cliquez sur le bouton latéral pour ouvrir Wallet.", systemImage: "hand.tap")
             Label("Testez-le une première fois à la badgeuse et gardez le badge d'origine en secours.", systemImage: "checkmark.shield")
         }

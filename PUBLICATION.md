@@ -34,16 +34,16 @@ Conseil : soumettre cet après-midi **à la fois** la bêta externe (lien TestFl
 
 ### Ou : envoi automatique par GitHub Actions (workflow « TestFlight »)
 
-Le workflow archive, signe et envoie le build sur TestFlight, puis les captures `AppStore/captures`. Il se lance depuis l'onglet *Actions* → *TestFlight* → *Run workflow* (ou par Claude). Préparation, une seule fois : créer ces secrets dans GitHub → *Settings* → *Secrets and variables* → *Actions* → *New repository secret*. Les secrets sont chiffrés, invisibles une fois enregistrés et jamais exposés aux contributions extérieures.
+Le workflow archive, signe et envoie le build sur TestFlight, puis les captures `AppStore/captures`. Il se lance depuis l'onglet *Actions* → *TestFlight* → *Run workflow* (ou par Claude). La signature App Store est **gérée par Apple** : Xcode obtient certificat et profil avec la clé API, rien n'est exporté d'un Mac (la clé doit avoir l'accès **Admin**). Préparation, une seule fois : créer ces secrets dans GitHub → *Settings* → *Secrets and variables* → *Actions* → *New repository secret*. Les secrets sont chiffrés, invisibles une fois enregistrés et jamais exposés aux contributions extérieures.
 
 | Secret | Où le trouver | Copier dans le presse-papiers (Terminal) |
 |---|---|---|
-| `ASC_KEY_ID`, `ASC_ISSUER_ID` | App Store Connect → *Utilisateurs et accès* → *Intégrations* → *App Store Connect API* (clé « Gestionnaire d'apps » ou « Admin » : celle des captures convient) | — |
+| `ASC_KEY_ID`, `ASC_ISSUER_ID` | App Store Connect → *Utilisateurs et accès* → *Intégrations* → *App Store Connect API* (clé d'équipe avec l'accès **Admin**) | — |
 | `ASC_KEY_P8` | le fichier `AuthKey_XXXX.p8` de cette clé | `pbcopy < ~/.appstoreconnect/private_keys/AuthKey_XXXX.p8` |
 | `APPLE_TEAM_ID` | developer.apple.com → *Membership details* → *Team ID* | — |
-| `DIST_CERTIFICATE_P12`, `DIST_CERTIFICATE_PASSWORD` | Xcode → *Réglages* → *Comptes* → équipe → *Gérer les certificats* : clic droit sur « Apple Distribution » → *Exporter* (choisir un mot de passe). S'il est grisé (géré dans le cloud), « + » → *Apple Distribution*, puis exporter | `base64 -i Distribution.p12 \| pbcopy` |
-| `APPSTORE_PROFILE` | developer.apple.com → *Profiles* → « + » → *App Store Connect* → App ID `fr.parentsapariscentre.badgecreche` → ce certificat Apple Distribution → *Generate* → *Download* | `base64 -i Badge_Creche.mobileprovision \| pbcopy` |
 | `PASS_CERTIFICATE_P12`, `PASS_CERTIFICATE_PASSWORD` | `App/BadgeCreche/PassCertificate.p12` et le mot de passe de `PassSigning.plist` | `base64 -i App/BadgeCreche/PassCertificate.p12 \| pbcopy` |
+
+Plus sûr pour le certificat Wallet : `bash tools/secrets_signature.sh`, depuis le dossier du projet. Le script vérifie que le `.p12` s'ouvre avec son mot de passe (comme le workflow), puis envoie les deux secrets avec GitHub CLI (`gh`) s'il est connecté, ou les copie un par un dans le presse-papiers. Les anciens secrets `DIST_CERTIFICATE_P12`, `DIST_CERTIFICATE_PASSWORD` et `APPSTORE_PROFILE` ne servent plus et peuvent être supprimés.
 
 Le numéro de build est celui du projet (`CURRENT_PROJECT_VERSION`), ou celui saisi au lancement. Le build apparaît dans TestFlight après le traitement d'Apple (10 à 30 min).
 
@@ -111,38 +111,14 @@ Dès que Matomo est branché (voir [MATOMO.md](MATOMO.md)) : *Données non assoc
 
 **Icône** : rien à envoyer, App Store Connect la prend dans le build. Copie en 1024 × 1024 : [`AppStore/icone-1024.png`](AppStore/icone-1024.png).
 
-**Notes pour l'App Review** (en anglais, < 4 000 caractères ; reprend les informations demandées par Apple au titre de la règle 2.1). Joindre aussi la vidéo et le QR code de test dans *Pièce jointe* :
+**Nouveautés de la version 1.1** (4 000 car. max)
 ```
-1. SCREEN RECORDING
-Attached: recorded on a physical iPhone running the latest iOS. It starts from the Home Screen and shows the whole flow: launch, choosing the nursery, scanning its QR code, adding the pass to Apple Wallet, editing and deleting the badge, and the About screen. The app has no account, no user-generated content and no paid content.
-
-2. PURPOSE AND AUDIENCE
-In Paris, many nurseries ("crèches") use a check-in terminal ("badgeuse"): at the start of the year, each family receives a printed QR code that parents scan at drop-off and pick-up. This paper badge is often forgotten or lost, or hard to find while carrying a child. Badge Crèche turns this QR code into an Apple Wallet pass that appears on the Lock Screen when the parent arrives at the nursery.
-Audience: parents of young children in Paris nurseries. Free, no ads, no account. Published by Christophe Amalric, president of the non-profit parents' association Parents à Paris Centre (APPC), on behalf of the association.
-
-3. HOW TO TEST (no login needed)
-Test QR code: attached image, also at https://tikris.github.io/appc-badgeuse/demo-qr.png. Show it on another screen to use the camera, or save it to Photos to import it.
-1) Tap "Créer mon badge".
-2) Location is optional and used on device only to suggest the 3 nearest nurseries. Outside Paris they are far away: pick one, or tap "Autre crèche" and choose any nursery in the list (search e.g. "Montmartre").
-3) In "QR code de la crèche", tap "Scanner le QR code" and point the camera at the test code (or "Choisir une photo ou une capture d'écran", or "Importer un fichier (PDF, image)").
-4) Optional: turn on "Afficher le nom de l'enfant" and type a first name.
-5) Tap "Enregistrer", then "Add to Apple Wallet" ("Ajouter à l'app Cartes" in French).
-The main screen then offers "Modifier le badge" and "Supprimer le badge"; the (i) button opens About. Near the nursery, iOS can suggest the pass on the Lock Screen (PassKit location relevance).
-
-4. EXTERNAL SERVICES
-No server, no third-party SDK, no analytics, no payment, no authentication service, no AI service. Apple frameworks only:
-- PassKit / Apple Wallet: the pass is generated and signed on the device;
-- Core Location: on device only, to sort nurseries by distance;
-- VisionKit / Vision: on-device QR code reading;
-- MapKit / Apple Maps: map preview of the nursery and, only if it is not in the list, address search.
-The list of Paris nurseries is bundled in the app (public directory of the City of Paris, Apur open data and OpenStreetMap, ODbL licence; addresses from the French Base Adresse Nationale, Licence Ouverte) and is never downloaded at runtime. Support and privacy pages are static pages on GitHub Pages. About links to the association's WhatsApp community.
-
-5. REGIONAL DIFFERENCES
-The app works the same in all regions. The interface is in French and the bundled list covers Paris; anywhere, the user can pick a nursery from the list or search any address with Apple Maps ("Ma crèche n'est pas dans la liste").
-
-6. REGULATED INDUSTRY / THIRD-PARTY MATERIAL
-Not a regulated industry and no protected third-party material. The QR code is the parent's own check-in code, given by their nursery for their personal use; the app stores it unchanged on the device. It does not connect to check-in terminals or their providers and does not create or alter any credential. The app is independent and not affiliated with the City of Paris or nursery operators (stated in the app and on the product page). The nursery list is open data used under the ODbL licence, with attribution in the app and on the website.
+• Distance réglable : choisissez à quelle distance de la crèche le badge apparaît sur l'écran verrouillé (10, 25 ou 50 m), ou désactivez l'affichage automatique.
+• Entrée de la crèche : touchez la carte (vue satellite) pour placer le repère exactement sur la porte.
+Réglages dans « Modifier le badge » → « Écran verrouillé ».
 ```
+
+**Notes pour l'App Review** (en anglais, < 4 000 caractères ; informations demandées par Apple au titre de la règle 2.1) : dans [`AppStore/review-notes.txt`](AppStore/review-notes.txt). Le workflow « TestFlight » les envoie dans App Store Connect avec le QR code de démonstration en pièce jointe (`tools/asc_release.swift`) ; joindre aussi la vidéo.
 
 ## 4. Après la mise en ligne
 

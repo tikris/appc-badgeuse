@@ -2,11 +2,12 @@
 
 L'APPC met à disposition une badgeuse intégrée à son portefeuille iPhone pour badger à l'arrivée et au départ de la crèche.
 
-**Badge Crèche** transforme le QR code remis par la crèche en début d'année en pass **Apple Wallet**, qui s'affiche tout seul sur l'écran verrouillé devant la crèche (10 m maximum).
+**Badge Crèche** transforme le QR code remis par la crèche en début d'année en pass **Apple Wallet**, qui s'affiche tout seul sur l'écran verrouillé devant la crèche (à 10 m par défaut ; 25 m, 50 m ou jamais au choix, avec l'entrée de la crèche ajustable sur la carte).
 
-- Parcours : l'app demande la position et propose **les 3 crèches les plus proches** ; « Autre crèche » ouvre la liste des **1 066 établissements d'accueil de Paris** (recherche, classement par arrondissement), avec en dernier recours une recherche d'adresse Apple Plans.
+- Parcours : l'app demande la position et propose **les 3 crèches les plus proches** ; « Autre crèche » ouvre la liste des **1 176 établissements d'accueil de Paris** (recherche, classement par arrondissement), avec en dernier recours une recherche d'adresse Apple Plans.
 - Champs : crèche (obligatoire, pour l'affichage à proximité), QR code (obligatoire), nom de la crèche et nom de l'enfant affichés sur le badge (facultatifs ; celui de l'enfant est désactivé par défaut).
 - Liste des crèches : construite par `tools/fetch_creches.py` (workflow « Données crèches ») à partir de l'annuaire des lieux de **paris.fr** (noms officiels des crèches municipales, associatives, familiales, parentales, haltes-garderies…), complété par l'[Apur](https://opendata.apur.org) et OpenStreetMap (ODbL) pour les établissements manquants ; adresses et points GPS normalisés avec la Base Adresse Nationale ; embarquée dans l'app (`App/BadgeCreche/Resources/creches-paris.json`, licence ODbL) : aucun appel réseau, la position ne quitte pas l'iPhone.
+- Noms d'usage : quand l'Apur ne donne qu'un nom générique, celui d'OpenStreetMap est repris ; les parents peuvent proposer le nom qu'ils utilisent depuis l'app (e-mail prêt à envoyer à l'APPC), qui le valide dans `tools/creches-noms.csv` : la liste est régénérée par la CI et profite à tous à la version suivante, sans serveur ni base de données.
 - Local : **le QR code, le nom de l'enfant et la position ne quittent jamais l'iPhone**, pas de compte. Le pass est **signé sur l'iPhone** et les données appartiennent entièrement à l'utilisateur (fichier même exclu des sauvegardes iCloud).
 - Statistiques **facultatives, désactivées par défaut** : avec l'accord du parent, la crèche choisie est envoyée une fois au Matomo auto-hébergé de l'APPC (voir **[MATOMO.md](MATOMO.md)**). Sans serveur configuré dans `AppConfig.statsEndpoint`, rien n'est envoyé et l'option n'apparaît pas.
 - Version 1 : un seul badge par iPhone (mis à jour en place dans Wallet).
@@ -72,8 +73,14 @@ App/BadgeCreche/
     PassSigningIdentity.swift  lecture du .p12, Pass Type ID / Team ID depuis le certificat
     DER.swift, ZipArchive.swift  encodage ASN.1 et ZIP minimalistes (aucune dépendance)
     QRCodeReader.swift       lecture du QR code (photo réduite à 2048 px, PDF), testée sur macOS
-  Services/                  stockage local, Wallet, aperçu du QR code et images du pass (mis en cache)
-  Features/                  écrans SwiftUI (accueil, éditeur, adresse, scanner, À propos)
+  Services/                  stockage local, liste des crèches (CrecheCatalog), position, Wallet et signature,
+                             aperçu du QR code et images du pass (mis en cache), statistiques facultatives
+  Features/                  écrans SwiftUI
+    Home/                    écran du badge : aperçu, ajout à Wallet, conseils
+    Editor/                  création / modification : crèche (proches, liste, adresse libre), QR code
+                             (scan, photo, fichier), écran verrouillé (distance, entrée sur la carte)
+    Shared/                  carte de la crèche, couleurs APPC, ligne d'attente
+    WelcomeView, AboutView, ScreenshotMode (captures App Store)
 docs/                        site GitHub Pages : présentation, confidentialité, mentions légales
 Tests/                       tests de signature avec une fausse chaîne de certificats
 ```

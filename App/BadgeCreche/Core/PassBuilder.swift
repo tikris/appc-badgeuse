@@ -17,9 +17,6 @@ nonisolated struct PassBranding {
 
 /// Construit le fichier .pkpass signé, entièrement sur l'appareil.
 nonisolated enum PassBuilder {
-    /// Distance maximale (en mètres) à la crèche pour que Wallet propose le badge sur l'écran verrouillé.
-    static let relevantDistance = 10
-
     static func pkpass(
         for badge: BadgeData,
         identity: PassSigningIdentity,
@@ -95,7 +92,7 @@ nonisolated enum PassBuilder {
         var description = branding.defaultTitle
         if let childName { description += " – \(childName)" }
 
-        let pass: [String: Any] = [
+        var pass: [String: Any] = [
             "formatVersion": 1,
             "passTypeIdentifier": passTypeIdentifier,
             "teamIdentifier": teamIdentifier,
@@ -111,20 +108,23 @@ nonisolated enum PassBuilder {
                 "message": badge.qrPayload,
                 "messageEncoding": BadgeData.messageEncoding(for: badge.qrPayload),
             ]],
-            "locations": [
-                [
-                    "latitude": badge.address.latitude,
-                    "longitude": badge.address.longitude,
-                    "relevantText": branding.relevantText,
-                ] as [String: Any],
-            ],
-            "maxDistance": relevantDistance,
             "generic": [
                 "primaryFields": primaryFields,
                 "secondaryFields": secondaryFields,
                 "backFields": backFields,
             ] as [String: Any],
         ]
+        // Proposé sur l'écran verrouillé près de la crèche, sauf si le parent l'a désactivé.
+        if let meters = badge.lockScreenDistance.meters {
+            pass["locations"] = [
+                [
+                    "latitude": badge.address.latitude,
+                    "longitude": badge.address.longitude,
+                    "relevantText": branding.relevantText,
+                ] as [String: Any],
+            ]
+            pass["maxDistance"] = meters
+        }
         return try JSONSerialization.data(withJSONObject: pass, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
     }
 }

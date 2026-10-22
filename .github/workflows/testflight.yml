@@ -1,14 +1,18 @@
 name: TestFlight
 
-# Archive, signe et envoie un build sur App Store Connect (TestFlight), puis envoie les captures
-# App Store. Lancement manuel (onglet Actions → TestFlight → Run workflow), voir PUBLICATION.md.
+# Archive, signe et envoie un build sur App Store Connect (TestFlight), envoie les captures App Store,
+# puis prépare la version : build associé, notes App Review, QR code de démonstration en pièce jointe
+# (tools/asc_release.swift). Lancement manuel (Actions → TestFlight → Run workflow), voir PUBLICATION.md.
+#
+# Signature App Store gérée par Apple (cloud) avec la clé API : ni certificat de distribution ni
+# profil à exporter d'un Mac. La clé doit avoir l'accès « Admin ».
 #
 # Secrets à créer une fois (Settings → Secrets and variables → Actions) :
-#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8      clé API App Store Connect (contenu du fichier .p8)
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8      clé API App Store Connect « Admin » (contenu du fichier .p8)
 #   APPLE_TEAM_ID                              identifiant d'équipe (10 caractères)
-#   DIST_CERTIFICATE_P12, DIST_CERTIFICATE_PASSWORD   certificat « Apple Distribution » (.p12 en base64)
-#   APPSTORE_PROFILE                           profil « App Store » de l'app (.mobileprovision en base64)
-#   PASS_CERTIFICATE_P12, PASS_CERTIFICATE_PASSWORD   certificat Pass Type ID (.p12 en base64)
+#   PASS_CERTIFICATE_P12, PASS_CERTIFICATE_PASSWORD   certificat Pass Type ID (.p12 en base64), embarqué dans l'app
+#
+# Les secrets ne sont donnés qu'aux étapes qui en ont besoin, et ce job n'utilise aucune action tierce.
 on:
   workflow_dispatch:
     inputs:
@@ -18,6 +22,10 @@ on:
         default: true
       upload_screenshots:
         description: "Envoyer les captures AppStore/captures sur App Store Connect"
+        type: boolean
+        default: true
+      prepare_release:
+        description: "Associer le build à la version et mettre à jour les notes App Review"
         type: boolean
         default: true
       build_number:
@@ -34,86 +42,93 @@ jobs:
     name: Build TestFlight
     if: ${{ inputs.upload_build }}
     runs-on: macos-latest
-    env:
-      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      DIST_CERTIFICATE_P12: ${{ secrets.DIST_CERTIFICATE_P12 }}
-      DIST_CERTIFICATE_PASSWORD: ${{ secrets.DIST_CERTIFICATE_PASSWORD }}
-      APPSTORE_PROFILE: ${{ secrets.APPSTORE_PROFILE }}
-      PASS_CERTIFICATE_P12: ${{ secrets.PASS_CERTIFICATE_P12 }}
-      PASS_CERTIFICATE_PASSWORD: ${{ secrets.PASS_CERTIFICATE_PASSWORD }}
+    outputs:
+      build_number: ${{ steps.archive.outputs.build }}
     steps:
       - uses: actions/checkout@v4
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
+      - name: Xcode stable le plus récent
+        run: |
+          set -euo pipefail
+          XCODE=$(ls -d /Applications/Xcode_*.app | grep -viE 'beta|release_candidate' | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
       - name: Vérification des secrets
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          PASS_CERTIFICATE_P12: ${{ secrets.PASS_CERTIFICATE_P12 }}
+          PASS_CERTIFICATE_PASSWORD: ${{ secrets.PASS_CERTIFICATE_PASSWORD }}
         run: |
           missing=0
-          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 APPLE_TEAM_ID DIST_CERTIFICATE_P12 DIST_CERTIFICATE_PASSWORD \
-                      APPSTORE_PROFILE PASS_CERTIFICATE_P12 PASS_CERTIFICATE_PASSWORD; do
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 APPLE_TEAM_ID PASS_CERTIFICATE_P12 PASS_CERTIFICATE_PASSWORD; do
             if [ -z "${!name}" ]; then echo "::error::Secret manquant : $name"; missing=1; fi
           done
           exit $missing
-      - name: Trousseau temporaire, certificat de distribution et profil App Store
-        run: |
-          set -euo pipefail
-          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
-          KEYCHAIN_PASSWORD=$(openssl rand -hex 16)
-          echo -n "$DIST_CERTIFICATE_P12" | base64 --decode -o "$RUNNER_TEMP/distribution.p12"
-          echo -n "$APPSTORE_PROFILE" | base64 --decode -o "$RUNNER_TEMP/appstore.mobileprovision"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security import "$RUNNER_TEMP/distribution.p12" -P "$DIST_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
-          security list-keychain -d user -s "$KEYCHAIN"
-          security find-identity -v -p codesigning "$KEYCHAIN"
-          PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
-          security cms -D -i "$RUNNER_TEMP/appstore.mobileprovision" > "$PROFILE_PLIST"
-          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$PROFILE_PLIST")
-          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" "$PROFILE_PLIST")
-          for dir in "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
-            mkdir -p "$dir" && cp "$RUNNER_TEMP/appstore.mobileprovision" "$dir/$PROFILE_UUID.mobileprovision"
-          done
-          echo "Profil : $PROFILE_NAME ($PROFILE_UUID)"
-          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
-          echo "KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
       - name: Certificat Wallet embarqué dans l'app (jamais commité)
+        env:
+          PASS_CERTIFICATE_P12: ${{ secrets.PASS_CERTIFICATE_P12 }}
+          PASS_CERTIFICATE_PASSWORD: ${{ secrets.PASS_CERTIFICATE_PASSWORD }}
         run: |
           set -euo pipefail
-          echo -n "$PASS_CERTIFICATE_P12" | base64 --decode -o App/BadgeCreche/PassCertificate.p12
+          # Espaces ou retours à la ligne collés avec le base64 : retirés avant décodage.
+          printf '%s' "$PASS_CERTIFICATE_P12" | tr -d ' \t\r\n' | base64 --decode -o App/BadgeCreche/PassCertificate.p12
+          echo "PASS_CERTIFICATE_P12 décodé : $(wc -c < App/BadgeCreche/PassCertificate.p12 | tr -d ' ') octets"
           plutil -create xml1 App/BadgeCreche/PassSigning.plist
-          plutil -insert CertificatePassword -string "$PASS_CERTIFICATE_PASSWORD" App/BadgeCreche/PassSigning.plist
+          # Retour à la ligne final (touche Entrée dans le champ du secret) : ignoré.
+          PASS_PASSWORD=$(printf '%s' "$PASS_CERTIFICATE_PASSWORD" | tr -d '\r\n')
+          plutil -insert CertificatePassword -string "$PASS_PASSWORD" App/BadgeCreche/PassSigning.plist
           curl -fsSL https://www.apple.com/certificateauthority/AppleWWDRCAG4.cer -o App/BadgeCreche/AppleWWDRCAG4.cer
-          # Un mauvais mot de passe ferait un build incapable de créer les badges : on s'arrête ici.
-          security import App/BadgeCreche/PassCertificate.p12 -P "$PASS_CERTIFICATE_PASSWORD" -f pkcs12 -k "$KEYCHAIN" > /dev/null
+          # Un mauvais mot de passe ferait un build incapable de créer les badges : vérifié dans un
+          # trousseau jetable, puis on s'arrête ici en cas d'échec.
+          CHECK="$RUNNER_TEMP/check.keychain-db"
+          security create-keychain -p "$(openssl rand -hex 16)" "$CHECK"
+          imported=0
+          security import App/BadgeCreche/PassCertificate.p12 -P "$PASS_PASSWORD" -f pkcs12 -k "$CHECK" > /dev/null && imported=1
+          security delete-keychain "$CHECK"
+          [ "$imported" = 1 ] \
+            || { echo "::error::PASS_CERTIFICATE_PASSWORD n'ouvre pas PASS_CERTIFICATE_P12 (mot de passe ou fichier .p12 différent)"; exit 1; }
       - name: Clé API App Store Connect
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
           mkdir -p "$RUNNER_TEMP/keys"
           printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
           echo "ASC_KEY_PATH=$RUNNER_TEMP/keys/AuthKey.p8" >> "$GITHUB_ENV"
       - name: Archive
+        id: archive
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          BUILD_INPUT: ${{ inputs.build_number }}
         run: |
           set -euo pipefail
-          BUILD="${{ inputs.build_number }}"
+          BUILD="$BUILD_INPUT"
           if [ -z "$BUILD" ]; then
             BUILD=$(xcodebuild -project BadgeCreche.xcodeproj -scheme BadgeCreche -showBuildSettings 2>/dev/null \
               | awk '/ CURRENT_PROJECT_VERSION = / { print $3; exit }')
           fi
           echo "Build $BUILD"
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          # Signature automatique : Xcode obtient certificat et profil auprès d'Apple avec la clé API.
           xcodebuild archive -quiet \
             -project BadgeCreche.xcodeproj -scheme BadgeCreche -configuration Release \
             -destination "generic/platform=iOS" -archivePath "$RUNNER_TEMP/BadgeCreche.xcarchive" \
-            CURRENT_PROJECT_VERSION="$BUILD" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
-            OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN"
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CURRENT_PROJECT_VERSION="$BUILD" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic
       - name: Envoi sur App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
+          # Distribution signée par le certificat géré par Apple (cloud) : aucune clé privée sur la machine.
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -122,10 +137,7 @@ jobs:
             <key>method</key><string>app-store-connect</string>
             <key>destination</key><string>upload</string>
             <key>teamID</key><string>$APPLE_TEAM_ID</string>
-            <key>signingStyle</key><string>manual</string>
-            <key>signingCertificate</key><string>Apple Distribution</string>
-            <key>provisioningProfiles</key>
-            <dict><key>fr.parentsapariscentre.badgecreche</key><string>$PROFILE_NAME</string></dict>
+            <key>signingStyle</key><string>automatic</string>
             <key>manageAppVersionAndBuildNumber</key><false/>
             <key>uploadSymbols</key><true/>
           </dict>
@@ -135,6 +147,7 @@ jobs:
             -archivePath "$RUNNER_TEMP/BadgeCreche.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
             -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
             -authenticationKeyPath "$ASC_KEY_PATH" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
@@ -142,8 +155,7 @@ jobs:
       - name: Nettoyage
         if: always()
         run: |
-          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
-          rm -f "$RUNNER_TEMP"/*.p12 "$RUNNER_TEMP"/*.mobileprovision "$RUNNER_TEMP/keys/AuthKey.p8" \
+          rm -f "$RUNNER_TEMP/keys/AuthKey.p8" "$RUNNER_TEMP/ExportOptions.plist" \
             App/BadgeCreche/PassCertificate.p12 App/BadgeCreche/PassSigning.plist
 
   screenshots:
@@ -165,4 +177,29 @@ jobs:
           mkdir -p "$RUNNER_TEMP/keys"
           printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
           ASC_KEY_PATH="$RUNNER_TEMP/keys/AuthKey.p8" swift tools/upload_screenshots.swift AppStore/captures fr-FR
+          rm -f "$RUNNER_TEMP/keys/AuthKey.p8"
+
+  release:
+    name: Version App Store (build, notes App Review)
+    needs: build
+    if: ${{ !cancelled() && inputs.prepare_release && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
+    runs-on: macos-latest
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Préparation de la version
+        env:
+          BUILD_INPUT: ${{ needs.build.outputs.build_number || inputs.build_number }}
+        run: |
+          set -euo pipefail
+          BUILD="$BUILD_INPUT"
+          if [ -z "$BUILD" ]; then
+            BUILD=$(sed -n 's/.*CURRENT_PROJECT_VERSION = \([0-9]*\);.*/\1/p' BadgeCreche.xcodeproj/project.pbxproj | head -1)
+          fi
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
+          ASC_KEY_PATH="$RUNNER_TEMP/keys/AuthKey.p8" swift tools/asc_release.swift "$BUILD"
           rm -f "$RUNNER_TEMP/keys/AuthKey.p8"
