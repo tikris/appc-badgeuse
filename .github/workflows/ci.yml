@@ -10,15 +10,22 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Lecture seule : la CI ne modifie jamais le dépôt.
+permissions:
+  contents: read
+
 jobs:
   pass-signing:
     name: Signature des pass (tests macOS + OpenSSL)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
+      - name: Xcode stable le plus récent
+        run: |
+          set -euo pipefail
+          XCODE=$(ls -d /Applications/Xcode_*.app | grep -viE 'beta|release_candidate' | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
       - name: Versions
         run: xcodebuild -version && swift --version
       - name: Tests unitaires
@@ -63,9 +70,12 @@ jobs:
             approachable: "NO"
     steps:
       - uses: actions/checkout@v4
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
+      - name: Xcode stable le plus récent
+        run: |
+          set -euo pipefail
+          XCODE=$(ls -d /Applications/Xcode_*.app | grep -viE 'beta|release_candidate' | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
       - name: Compilation simulateur (Debug)
         run: |
           set -o pipefail

@@ -34,18 +34,16 @@ Conseil : soumettre cet après-midi **à la fois** la bêta externe (lien TestFl
 
 ### Ou : envoi automatique par GitHub Actions (workflow « TestFlight »)
 
-Le workflow archive, signe et envoie le build sur TestFlight, puis les captures `AppStore/captures`. Il se lance depuis l'onglet *Actions* → *TestFlight* → *Run workflow* (ou par Claude). Préparation, une seule fois : créer ces secrets dans GitHub → *Settings* → *Secrets and variables* → *Actions* → *New repository secret*. Les secrets sont chiffrés, invisibles une fois enregistrés et jamais exposés aux contributions extérieures.
+Le workflow archive, signe et envoie le build sur TestFlight, puis les captures `AppStore/captures`. Il se lance depuis l'onglet *Actions* → *TestFlight* → *Run workflow* (ou par Claude). La signature App Store est **gérée par Apple** : Xcode obtient certificat et profil avec la clé API, rien n'est exporté d'un Mac (la clé doit avoir l'accès **Admin**). Préparation, une seule fois : créer ces secrets dans GitHub → *Settings* → *Secrets and variables* → *Actions* → *New repository secret*. Les secrets sont chiffrés, invisibles une fois enregistrés et jamais exposés aux contributions extérieures.
 
 | Secret | Où le trouver | Copier dans le presse-papiers (Terminal) |
 |---|---|---|
-| `ASC_KEY_ID`, `ASC_ISSUER_ID` | App Store Connect → *Utilisateurs et accès* → *Intégrations* → *App Store Connect API* (clé « Gestionnaire d'apps » ou « Admin » : celle des captures convient) | — |
+| `ASC_KEY_ID`, `ASC_ISSUER_ID` | App Store Connect → *Utilisateurs et accès* → *Intégrations* → *App Store Connect API* (clé d'équipe avec l'accès **Admin**) | — |
 | `ASC_KEY_P8` | le fichier `AuthKey_XXXX.p8` de cette clé | `pbcopy < ~/.appstoreconnect/private_keys/AuthKey_XXXX.p8` |
 | `APPLE_TEAM_ID` | developer.apple.com → *Membership details* → *Team ID* | — |
-| `DIST_CERTIFICATE_P12`, `DIST_CERTIFICATE_PASSWORD` | Xcode → *Réglages* → *Comptes* → équipe → *Gérer les certificats* : clic droit sur « Apple Distribution » → *Exporter* (choisir un mot de passe). S'il est grisé (géré dans le cloud), « + » → *Apple Distribution*, puis exporter | `base64 -i Distribution.p12 \| pbcopy` |
-| `APPSTORE_PROFILE` | developer.apple.com → *Profiles* → « + » → *App Store Connect* → App ID `fr.parentsapariscentre.badgecreche` → ce certificat Apple Distribution → *Generate* → *Download* | `base64 -i Badge_Creche.mobileprovision \| pbcopy` |
 | `PASS_CERTIFICATE_P12`, `PASS_CERTIFICATE_PASSWORD` | `App/BadgeCreche/PassCertificate.p12` et le mot de passe de `PassSigning.plist` | `base64 -i App/BadgeCreche/PassCertificate.p12 \| pbcopy` |
 
-Plus sûr pour les quatre secrets des certificats : `bash tools/secrets_signature.sh [Distribution.p12]`, depuis le dossier du projet. Le script vérifie que chaque `.p12` s'ouvre avec son mot de passe (comme le workflow), puis envoie les secrets avec GitHub CLI (`gh`) s'il est connecté, ou les copie un par un dans le presse-papiers.
+Plus sûr pour le certificat Wallet : `bash tools/secrets_signature.sh`, depuis le dossier du projet. Le script vérifie que le `.p12` s'ouvre avec son mot de passe (comme le workflow), puis envoie les deux secrets avec GitHub CLI (`gh`) s'il est connecté, ou les copie un par un dans le presse-papiers. Les anciens secrets `DIST_CERTIFICATE_P12`, `DIST_CERTIFICATE_PASSWORD` et `APPSTORE_PROFILE` ne servent plus et peuvent être supprimés.
 
 Le numéro de build est celui du projet (`CURRENT_PROJECT_VERSION`), ou celui saisi au lancement. Le build apparaît dans TestFlight après le traitement d'Apple (10 à 30 min).
 
