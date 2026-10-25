@@ -1,0 +1,8 @@
+# Noms d'usage proposés par les parents (bouton « Proposer le nom utilisé par les parents » de
+# l'application, reçus par e-mail) et validés par l'APPC. Ils l'emportent sur paris.fr, l'Apur et
+# OpenStreetMap à la prochaine génération de la liste (workflow « Données crèches », relancé dès
+# que ce fichier change sur une branche), puis arrivent chez tous les parents avec la version suivante.
+#
+# Une ligne par crèche : la « Référence » indiquée dans l'e-mail, un point-virgule, le nom d'usage.
+# Exemple : apur-753007001;Babilou Dames & Batignolles
+reference;nom

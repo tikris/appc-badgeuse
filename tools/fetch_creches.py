@@ -44,7 +44,21 @@ OVERPASS = [
     "https://overpass.kumi.systems/api/interpreter",
 ]
 DUPLICATE_METERS = 60
+# Reprise d'un nom d'usage (OpenStreetMap) pour un établissement au nom générique : même adresse ou très proche.
+NAME_METERS = 30
+# Ni crèche ni halte-garderie, même si OpenStreetMap les classe en « childcare ».
+NOT_A_CRECHE = re.compile(r"\bpmi\b|protection (maternelle|infantile)|\bgym\b")
+# Réseaux de crèches privées : leur nom seul (« Babilou ») ne distingue pas un établissement d'un autre.
+BRANDS = [
+    (re.compile(r"babilou"), "Babilou"),
+    (re.compile(r"people\s*&\s*baby"), "People & Baby"),
+    (re.compile(r"(les )?petits chaperons rouges"), "Les Petits Chaperons Rouges"),
+    (re.compile(r"liveli"), "Liveli"),
+    (re.compile(r"(la )?maison bleue"), "La Maison Bleue"),
+]
 OUTPUT = Path(__file__).resolve().parent.parent / "App" / "BadgeCreche" / "Resources" / "creches-paris.json"
+# Noms d'usage validés par l'APPC (proposés par les parents depuis l'application) : prioritaires.
+NAMES = Path(__file__).resolve().parent / "creches-noms.csv"
 USER_AGENT = "appc-badgeuse (https://github.com/tikris/appc-badgeuse)"
 
 DESIGNATIONS = {
@@ -99,7 +113,8 @@ def raw_street(p):
     liaison = "" if len(liaison) <= 1 and liaison != "d" else liaison
     name = title_case(str(p.get("l_voie") or ""))
     parts = [f"{number}{suffix}" if number else "", designation, liaison, name]
-    return re.sub(r"\s+", " ", " ".join(x for x in parts if x)).replace("d ", "d'").strip()
+    # « rue d Alésia » → « rue d'Alésia », sans toucher aux mots finissant par d (« Raymond Losserand »).
+    return re.sub(r"\bd ", "d'", re.sub(r"\s+", " ", " ".join(x for x in parts if x))).strip()
 
 
 def kind_of(name):
@@ -271,14 +286,18 @@ def apur_rows():
     return rows
 
 
-def previous_osm_rows(path):
-    """Si aucun serveur Overpass ne répond, reprend les entrées OpenStreetMap de la liste précédente."""
+def previous_creches(path):
+    """Liste précédente, par référence (vide si absente ou illisible)."""
     try:
-        previous = json.loads(path.read_text(encoding="utf-8"))["creches"]
+        return {c["id"]: c for c in json.loads(path.read_text(encoding="utf-8"))["creches"]}
     except (OSError, ValueError, KeyError):
-        return []
+        return {}
+
+
+def previous_osm_rows(previous):
+    """Si aucun serveur Overpass ne répond, reprend les entrées OpenStreetMap de la liste précédente."""
     rows = []
-    for c in previous:
+    for c in previous.values():
         if c.get("src") == "osm":
             rows.append({"id": c["id"], "source_name": c["name"], "raw_address": c["street"], "street": c["street"],
                          "citycode": "", "postcode": c["postcode"], "management": c["management"],
@@ -313,7 +332,7 @@ def osm_rows():
         name = tags["name"].strip()
         folded = fold(name)
         kind_fr = tags.get("kindergarten:FR", "")
-        if excluded.search(folded) and not looks_like_creche.search(folded):
+        if (excluded.search(folded) and not looks_like_creche.search(folded)) or NOT_A_CRECHE.search(folded):
             continue
         if not (tags["amenity"] == "childcare" or "crèche" in kind_fr or "halte" in kind_fr or looks_like_creche.search(folded)):
             continue
@@ -347,31 +366,83 @@ def significant_words(name):
 
 def merge(sources):
     """Garde la première source pour chaque établissement : les suivantes ne complètent que les manques
-    (doublon : même adresse, moins de 60 m, ou moins de 150 m avec un nom en commun)."""
+    (doublon : même adresse, moins de 60 m, ou moins de 150 m avec un nom en commun).
+    Un doublon apporte toutefois son nom quand l'établissement retenu n'a qu'un nom générique
+    (« Crèche » à l'Apur) : c'est le nom d'usage, celui que les parents cherchent."""
     kept = []
     for label, rows in sources:
         previous = list(kept)  # pas de dédoublonnage à l'intérieur d'une même source
-        added = 0
+        added = renamed = 0
         for row in rows:
             if row["lat"] is None:
                 continue
             row["words"] = significant_words(row["source_name"])
             row["address_key"] = (fold(row["street"]).replace("-", " "), row["postcode"])
-            duplicate = any(
-                row["address_key"] == other["address_key"]
+            match = next((
+                other for other in previous
+                if row["address_key"] == other["address_key"]
                 or (d := distance(row, other)) < DUPLICATE_METERS
                 or (d < 150 and row["words"] & other["words"])
-                for other in previous
-            )
-            if not duplicate:
+            ), None)
+            if match is None:
                 kept.append(row)
                 added += 1
-        print(f"Fusion : {label} apporte {added} établissement(s) sur {len(rows)}")
+            elif usage_name_applies(row, match):
+                match.setdefault("generic_name", match["source_name"])
+                match["source_name"] = row["source_name"]
+                renamed += 1
+        print(f"Fusion : {label} apporte {added} établissement(s) sur {len(rows)}, et {renamed} nom(s) d'usage")
     return kept
+
+
+def usage_name_applies(row, match):
+    """Nom d'usage repris d'un doublon : seulement s'il est précis et à la même adresse (ou à moins de
+    NAME_METERS), pour ne pas donner à une crèche le nom de sa voisine."""
+    if not is_generic(match["source_name"]) or is_generic(row["source_name"]) or NOT_A_CRECHE.search(fold(row["source_name"])):
+        return False
+    return row["address_key"] == match["address_key"] or distance(row, match) < NAME_METERS
+
+
+def display_name(name, street):
+    """Nom affiché : réseau seul complété par la rue (« Babilou rue des Dames »), réseau écrit de façon
+    homogène, première lettre en majuscule."""
+    folded = fold(name)
+    for pattern, brand in BRANDS:
+        if pattern.search(folded):
+            rest = pattern.sub(" ", folded)
+            if not significant_words(rest) - {"inter", "entreprises", "entreprise", "paris"}:
+                street_name = re.sub(r"^\d+\s*(bis|ter|quater)?\s*", "", street).strip()
+                return f"{brand} {street_name[:1].lower()}{street_name[1:]}".strip()
+            break
+    return name[:1].upper() + name[1:]
+
+
+def usage_names(path):
+    """« référence;nom » par ligne ; lignes vides, commentaires (#) et en-tête ignorés."""
+    names = {}
+    if not path.exists():
+        return names
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        reference, _, name = line.partition(";")
+        reference, name = reference.strip(), name.strip()
+        if reference and name and reference != "reference":
+            names[reference] = name
+    return names
+
+
+def kind_of_row(row):
+    """Catégorie du nom d'usage s'il en indique une, sinon celle du nom générique d'origine."""
+    kind = kind_of(row["source_name"])
+    if kind == "Crèche" and row.get("generic_name"):
+        return kind_of(row["generic_name"])
+    return kind
 
 
 def main():
     output = Path(sys.argv[1]) if len(sys.argv) > 1 else OUTPUT
+    previous = previous_creches(output)
     paris = paris_fr_rows()
     try:
         apur = apur_rows()
@@ -381,7 +452,7 @@ def main():
     osm = osm_rows()
     osm_from_previous = not osm
     if osm_from_previous:
-        osm = previous_osm_rows(output)
+        osm = previous_osm_rows(previous)
 
     # Adresses normalisées et coordonnées du point d'adresse (BAN) pour paris.fr et l'Apur.
     try:
@@ -389,18 +460,27 @@ def main():
     except Exception as error:  # noqa: BLE001
         print("BAN indisponible, adresses brutes conservées :", error)
         normalized = {}
-    fallback = 0
+    fallback = kept = 0
     for row in paris + apur:
         if row["id"] in normalized:
             row["street"], row["postcode"], lat, lon = normalized[row["id"]]
             if row["src"] == "paris.fr":
                 row["lat"], row["lon"] = round(lat, 6), round(lon, 6)
+        elif row["id"] in previous:
+            # La BAN ne reconnaît pas toujours les mêmes adresses d'un lot à l'autre : l'adresse
+            # de la liste précédente est gardée plutôt que l'adresse brute (nom de la crèche stable).
+            old = previous[row["id"]]
+            row["street"], row["postcode"] = old["street"], old["postcode"]
+            if row["src"] == "paris.fr":
+                row["lat"], row["lon"] = old["lat"], old["lon"]
+            kept += 1
         else:
             row["street"] = row["raw_address"]
             if row["src"] == "paris.fr":
                 row["lat"], row["lon"] = row["page_lat"], row["page_lon"]
                 fallback += 1
-    print(f"BAN : {len(normalized)} adresses normalisées ; paris.fr sans adresse reconnue (coordonnées de la page) : {fallback}")
+    print(f"BAN : {len(normalized)} adresses normalisées ; {kept} reprises de la liste précédente ; "
+          f"paris.fr sans adresse reconnue (coordonnées de la page) : {fallback}")
 
     # OpenStreetMap : adresse des tags, sinon géocodage inverse.
     try:
@@ -419,21 +499,31 @@ def main():
 
     rows = merge([("paris.fr", paris), ("Apur", apur), ("OpenStreetMap", osm)])
 
+    validated = usage_names(NAMES)
     creches = []
     for row in rows:
         street, postcode = row["street"], row["postcode"]
         if not street or not postcode.startswith("75"):
             continue
-        kind = kind_of(row["source_name"])
+        kind = kind_of_row(row)
         name = row["source_name"]
-        if is_generic(name):
+        if row["id"] in validated:
+            name = validated[row["id"]]
+            if kind_of(name) != "Crèche":
+                kind = kind_of(name)
+        elif is_generic(name):
             street_name = re.sub(r"^\d+\s*(bis|ter|quater)?\s*", "", street).strip()
             name = f"{kind} {street_name[:1].lower()}{street_name[1:]}" if street_name else kind
+        else:
+            name = display_name(name, street)
         creches.append({
             "id": row["id"], "name": name, "kind": kind, "management": row["management"],
             "street": street, "postcode": postcode, "lat": row["lat"], "lon": row["lon"], "src": row["src"],
         })
     creches.sort(key=lambda c: (c["postcode"], fold(c["name"])))
+    unknown = set(validated) - {c["id"] for c in creches}
+    print(f"Noms d'usage validés (tools/creches-noms.csv) : {len(validated) - len(unknown)} appliqué(s)"
+          + (f", références inconnues : {sorted(unknown)}" if unknown else ""))
 
     document = {
         "source": "Ville de Paris (annuaire des lieux de paris.fr), Apur (« Équipements ponctuels – Petite enfance »), "
@@ -449,6 +539,8 @@ def main():
     print("Sources :", Counter(c["src"] for c in creches))
     print("Types :", Counter(c["kind"] for c in creches))
     print("Gestion :", Counter(c["management"] for c in creches))
+    generic = sum(1 for c in creches if re.match(r"^\S+ (rue|avenue|boulevard|place|quai|passage|villa|impasse|square|cite|allee)\b", fold(c["name"])))
+    print(f"Noms génériques restants (« Crèche rue … ») : {generic} sur {len(creches)}")
     print("Contrôle « Grange aux Belles » :", [c for c in creches if "grange aux belles" in fold(c["name"] + " " + c["street"]).replace("-", " ")])
     print("Exemples :")
     for creche in creches[::max(1, len(creches) // 15)]:

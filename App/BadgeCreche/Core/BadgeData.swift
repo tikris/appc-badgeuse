@@ -9,6 +9,23 @@ nonisolated struct CrecheAddress: Codable, Hashable {
     var name: String? = nil
 }
 
+/// Distance à laquelle Wallet propose le badge sur l'écran verrouillé (`maxDistance` du pass).
+/// Wallet plafonne de lui-même à une centaine de mètres pour ce type de pass : inutile d'aller au-delà.
+nonisolated enum LockScreenDistance: Int, CaseIterable, Identifiable {
+    case door = 10
+    case street = 25
+    case approach = 50
+    case never = 0
+
+    /// Réglage par défaut, et celui des badges créés avant que la distance soit réglable.
+    static let standard = door
+
+    var id: Int { rawValue }
+
+    /// Distance en mètres ; nil quand le badge ne doit jamais s'afficher tout seul.
+    var meters: Int? { self == .never ? nil : rawValue }
+}
+
 /// Le badge enregistré localement. Version 1 : un seul badge par iPhone.
 nonisolated struct BadgeData: Codable, Hashable {
     /// Identifiant stable du pass dans Wallet (permet de le mettre à jour plutôt que d'en créer un second).
@@ -21,6 +38,14 @@ nonisolated struct BadgeData: Codable, Hashable {
     var crecheName: String
     var address: CrecheAddress
     var updatedAt: Date
+    /// Choix du parent pour l'écran verrouillé (valeur de `LockScreenDistance`) ; absent des badges
+    /// enregistrés avant que la distance soit réglable.
+    var lockScreenMeters: Int? = nil
+
+    var lockScreenDistance: LockScreenDistance {
+        get { lockScreenMeters.flatMap(LockScreenDistance.init(rawValue:)) ?? .standard }
+        set { lockScreenMeters = newValue.rawValue }
+    }
 
     /// Nom affiché sur le pass, uniquement si le parent l'a choisi.
     var displayedChildName: String? {
