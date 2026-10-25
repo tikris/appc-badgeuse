@@ -32,6 +32,10 @@ on:
         description: "Numéro de build (vide : celui du projet)"
         type: string
         required: false
+      signing_test:
+        description: "Tester seulement la signature : archive et export signés, sans certificat Wallet ni envoi"
+        type: boolean
+        default: false
 
 concurrency:
   group: testflight
@@ -60,13 +64,17 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           PASS_CERTIFICATE_P12: ${{ secrets.PASS_CERTIFICATE_P12 }}
           PASS_CERTIFICATE_PASSWORD: ${{ secrets.PASS_CERTIFICATE_PASSWORD }}
+          SIGNING_TEST: ${{ inputs.signing_test }}
         run: |
           missing=0
-          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 APPLE_TEAM_ID PASS_CERTIFICATE_P12 PASS_CERTIFICATE_PASSWORD; do
+          names="ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 APPLE_TEAM_ID"
+          [ "$SIGNING_TEST" = true ] || names="$names PASS_CERTIFICATE_P12 PASS_CERTIFICATE_PASSWORD"
+          for name in $names; do
             if [ -z "${!name}" ]; then echo "::error::Secret manquant : $name"; missing=1; fi
           done
           exit $missing
       - name: Certificat Wallet embarqué dans l'app (jamais commité)
+        if: ${{ !inputs.signing_test }}
         env:
           PASS_CERTIFICATE_P12: ${{ secrets.PASS_CERTIFICATE_P12 }}
           PASS_CERTIFICATE_PASSWORD: ${{ secrets.PASS_CERTIFICATE_PASSWORD }}
@@ -126,8 +134,12 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          SIGNING_TEST: ${{ inputs.signing_test }}
         run: |
           set -euo pipefail
+          # Test de signature : export signé sur la machine, rien n'est envoyé (app sans certificat Wallet).
+          DESTINATION=upload
+          [ "$SIGNING_TEST" = true ] && DESTINATION=export
           # Distribution signée par le certificat géré par Apple (cloud) : aucune clé privée sur la machine.
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -135,7 +147,7 @@ jobs:
           <plist version="1.0">
           <dict>
             <key>method</key><string>app-store-connect</string>
-            <key>destination</key><string>upload</string>
+            <key>destination</key><string>$DESTINATION</string>
             <key>teamID</key><string>$APPLE_TEAM_ID</string>
             <key>signingStyle</key><string>automatic</string>
             <key>manageAppVersionAndBuildNumber</key><false/>
@@ -151,7 +163,11 @@ jobs:
             -authenticationKeyPath "$ASC_KEY_PATH" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
-          echo "Build envoyé : il apparaît dans TestFlight après le traitement d'Apple (10 à 30 min)."
+          if [ "$SIGNING_TEST" = true ]; then
+            echo "Signature gérée par Apple : OK (app signée pour l'App Store, rien n'a été envoyé)."
+          else
+            echo "Build envoyé : il apparaît dans TestFlight après le traitement d'Apple (10 à 30 min)."
+          fi
       - name: Nettoyage
         if: always()
         run: |
@@ -182,7 +198,7 @@ jobs:
   release:
     name: Version App Store (build, notes App Review)
     needs: build
-    if: ${{ !cancelled() && inputs.prepare_release && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
+    if: ${{ !cancelled() && inputs.prepare_release && !inputs.signing_test && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
     runs-on: macos-latest
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
