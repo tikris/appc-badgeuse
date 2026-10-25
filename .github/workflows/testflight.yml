@@ -101,8 +101,8 @@ jobs:
         env:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
-          mkdir -p "$RUNNER_TEMP/keys"
-          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
+          # Clé remise au format PEM (copier-coller abîmé toléré) et vérifiée.
+          bash tools/asc_key.sh "$RUNNER_TEMP/keys/AuthKey.p8"
           echo "ASC_KEY_PATH=$RUNNER_TEMP/keys/AuthKey.p8" >> "$GITHUB_ENV"
       - name: Archive
         id: archive
@@ -190,8 +190,8 @@ jobs:
           for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do
             if [ -z "${!name}" ]; then echo "::error::Secret manquant : $name"; exit 1; fi
           done
-          mkdir -p "$RUNNER_TEMP/keys"
-          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
+          # Clé remise au format PEM (copier-coller abîmé toléré) et vérifiée.
+          bash tools/asc_key.sh "$RUNNER_TEMP/keys/AuthKey.p8"
           ASC_KEY_PATH="$RUNNER_TEMP/keys/AuthKey.p8" swift tools/upload_screenshots.swift AppStore/captures fr-FR
           rm -f "$RUNNER_TEMP/keys/AuthKey.p8"
 
@@ -215,7 +215,7 @@ jobs:
           if [ -z "$BUILD" ]; then
             BUILD=$(sed -n 's/.*CURRENT_PROJECT_VERSION = \([0-9]*\);.*/\1/p' BadgeCreche.xcodeproj/project.pbxproj | head -1)
           fi
-          mkdir -p "$RUNNER_TEMP/keys"
-          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
+          # Clé remise au format PEM (copier-coller abîmé toléré) et vérifiée.
+          bash tools/asc_key.sh "$RUNNER_TEMP/keys/AuthKey.p8"
           ASC_KEY_PATH="$RUNNER_TEMP/keys/AuthKey.p8" swift tools/asc_release.swift "$BUILD"
           rm -f "$RUNNER_TEMP/keys/AuthKey.p8"
