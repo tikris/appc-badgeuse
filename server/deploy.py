@@ -60,12 +60,30 @@ def wait(path, key, ready=("ready",), failed=("error",)):
     sys.exit(f"::error::{key} toujours en cours après 15 minutes")
 
 
+def diagnose(project):
+    """Ce que la clé voit, sans secret : début des ID de projet seulement (8 caractères)."""
+    looks_like_id = len(project) == 36 and project.count("-") == 4
+    print(f"SCW_PROJECT_ID : {project[:8]}… ({'format UUID' if looks_like_id else 'format inattendu : UUID attendu'})")
+    visible = call("GET", "/namespaces", query={"page_size": 100})["namespaces"]
+    if not visible:
+        print("La clé ne voit aucun espace de noms Serverless Functions, dans aucun projet.")
+    for namespace in visible:
+        print(f"Visible : espace « {namespace['name']} » (projet {namespace['project_id'][:8]}…, "
+              f"{namespace.get('region', '?')}, {namespace.get('status')})")
+    elsewhere = [n for n in visible if n["name"] == NAMESPACE and n["project_id"] != project]
+    if elsewhere:
+        sys.exit(f"::error::L'espace « {NAMESPACE} » existe dans le projet {elsewhere[0]['project_id'][:8]}…, "
+                 f"pas dans celui de SCW_PROJECT_ID ({project[:8]}…) : corrigez le secret SCW_PROJECT_ID.")
+
+
 def main(archive):
-    project = os.environ["SCW_PROJECT_ID"]
+    project = os.environ["SCW_PROJECT_ID"].strip()
     namespaces = call("GET", "/namespaces", query={"project_id": project, "name": NAMESPACE})["namespaces"]
-    namespace = next((n for n in namespaces if n["name"] == NAMESPACE), None) or call(
-        "POST", "/namespaces", {"name": NAMESPACE, "project_id": project,
-                                "description": "Badge Crèche (APPC) : signature des badges Wallet"})
+    namespace = next((n for n in namespaces if n["name"] == NAMESPACE), None)
+    if namespace is None:
+        diagnose(project)
+        namespace = call("POST", "/namespaces", {"name": NAMESPACE, "project_id": project,
+                                                 "description": "Badge Crèche (APPC) : signature des badges Wallet"})
     namespace = wait(f"/namespaces/{namespace['id']}", "Espace de noms")
 
     functions = call("GET", "/functions", query={"namespace_id": namespace["id"], "name": FUNCTION})["functions"]
