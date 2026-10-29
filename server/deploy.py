@@ -101,7 +101,16 @@ def main(archive):
         urllib.request.urlopen(request, timeout=120).close()
     call("POST", f"/functions/{function['id']}/deploy", {})
     function = wait(f"/functions/{function['id']}", "Fonction")
-    print(f"Service de signature : https://{function['domain_name']}")
+    url = f"https://{function['domain_name']}"
+    print(f"Service de signature : {url}")
+    # Vérification : un défi si le certificat est en place, « erreur_interne » s'il manque encore.
+    try:
+        with urllib.request.urlopen(url, timeout=60) as response:
+            reply = json.loads(response.read())
+        print(f"Réponse : défi reçu, type de pass {reply.get('passTypeIdentifier')}")
+    except urllib.error.HTTPError as error:
+        print(f"Réponse : {error.code} {error.read().decode(errors='replace')[:200]}"
+              " (certificat du service pas encore en place ?)")
 
 
 if __name__ == "__main__":
