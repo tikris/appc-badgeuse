@@ -39,7 +39,13 @@ def call(method, path, body=None, query=None):
         with urllib.request.urlopen(request, timeout=60) as response:
             return json.loads(response.read() or b"{}")
     except urllib.error.HTTPError as error:
-        sys.exit(f"::error::Scaleway {method} {path} : {error.code} {error.read().decode(errors='replace')[:500]}")
+        hint = ""
+        if error.code in (401, 403):
+            hint = (" (clé API sans ce droit : la politique IAM de l'application doit donner FunctionsFullAccess"
+                    " sur le projet dont l'ID est dans SCW_PROJECT_ID ; une politique modifiée met une à deux"
+                    " minutes à s'appliquer)")
+        sys.exit(f"::error::Scaleway {method} {path} : {error.code} "
+                 f"{error.read().decode(errors='replace')[:500]}{hint}")
 
 
 def wait(path, key, ready=("ready",), failed=("error",)):
