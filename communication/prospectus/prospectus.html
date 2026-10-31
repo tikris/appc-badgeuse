@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Badge Crèche – prospectus A4</title>
+<!--
+  Prospectus A4 à afficher dans les crèches. PDF et aperçu : node communication/prospectus/render.js
+  Un seul QR code scannable sur la page (celui du téléchargement) : le badge dessiné dans le
+  téléphone est volontairement un pictogramme, pour que personne ne scanne le mauvais code.
+-->
+<style>
+  :root {
+    --coral: #ff7a59;
+    --coral-text: #c9461f;
+    --coral-tint: #fff2ec;
+    --navy: #22305a;
+    --navy-deep: #1b2547;
+    --text: #1d2433;
+    --muted: #5b6475;
+    --label: #ffb096;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body {
+    font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page {
+    width: 210mm; height: 297mm; overflow: hidden;
+    padding: 12mm 14mm 10mm;
+    display: flex; flex-direction: column; gap: 5mm;
+  }
+
+  /* En-tête */
+  .top { display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 3.5mm; }
+  .brand img { width: 15mm; height: 15mm; border-radius: 3.4mm; }
+  .brand strong { display: block; font-size: 17pt; letter-spacing: -0.2pt; color: var(--navy); }
+  .brand span { display: block; font-size: 9.5pt; color: var(--muted); }
+  .by { text-align: right; font-size: 9.5pt; line-height: 1.35; color: var(--muted); }
+  .by strong { color: var(--navy); }
+
+  /* Accroche */
+  .hero {
+    position: relative; background: var(--coral-tint); border-radius: 7mm;
+    display: grid; grid-template-columns: 1fr 66mm; gap: 4mm;
+    padding: 9mm 8mm 8mm 10mm; height: 118mm;
+  }
+  .kicker {
+    margin: 0 0 3mm; font-size: 10pt; font-weight: 700; letter-spacing: 1.2pt;
+    text-transform: uppercase; color: var(--coral-text);
+  }
+  h1 {
+    margin: 0; font-family: "Inter Display", "Inter", sans-serif; font-weight: 800;
+    font-size: 36pt; line-height: 1.04; letter-spacing: -1pt; color: var(--navy);
+  }
+  h1 em { font-style: normal; color: var(--coral-text); }
+  .lead { margin: 4.5mm 0 0; font-size: 13pt; line-height: 1.4; }
+  .lead strong { color: var(--navy); }
+  .perks { list-style: none; margin: 5mm 0 0; padding: 0; display: grid; gap: 2mm; }
+  .perks li { display: flex; align-items: center; gap: 2.5mm; font-size: 11pt; font-weight: 600; color: var(--navy); }
+  .perks svg { flex: none; width: 5.2mm; height: 5.2mm; }
+
+  /* Téléphone : écran verrouillé avec la suggestion de l'app Cartes */
+  .visual { position: relative; }
+  .phone {
+    position: absolute; right: 0; top: 0;
+    width: 52mm; height: 101mm; border-radius: 8.5mm; padding: 1.4mm;
+    background: #15161a; box-shadow: 0 3mm 8mm rgba(34, 48, 90, 0.28);
+  }
+  .screen {
+    position: relative; width: 100%; height: 100%; border-radius: 7.3mm; overflow: hidden;
+    background: linear-gradient(165deg, #ffc9b6 0%, #ff9c7d 34%, #c76a6a 62%, #3a4778 100%);
+    color: #fff; text-align: center;
+  }
+  .island { position: absolute; top: 2.6mm; left: 50%; transform: translateX(-50%); width: 15mm; height: 4.4mm; border-radius: 3mm; background: #000; }
+  .date { margin-top: 10.5mm; font-size: 7.5pt; font-weight: 600; opacity: 0.95; }
+  .time { font-family: "Inter Display", "Inter", sans-serif; font-weight: 700; font-size: 37pt; line-height: 1; letter-spacing: -1pt; margin-top: 0.5mm; }
+  .notif {
+    position: absolute; left: 2.5mm; right: 2.5mm; top: 40mm;
+    display: flex; gap: 2.4mm; align-items: center; text-align: left;
+    padding: 2.3mm 2.4mm; border-radius: 3.6mm;
+    background: rgba(255, 255, 255, 0.9); color: #1d1d1f;
+    box-shadow: 0 1mm 3mm rgba(0, 0, 0, 0.15);
+  }
+  .notif img { width: 7mm; height: 7mm; border-radius: 1.9mm; flex: none; }
+  .notif b { display: block; font-size: 6.8pt; }
+  .notif span { display: block; font-size: 6.2pt; line-height: 1.3; color: #3a3a3c; padding-right: 1mm; }
+  .notif i { position: absolute; top: 2.1mm; right: 2.4mm; font-style: normal; font-size: 5.4pt; color: #6e6e73; }
+  .lock-buttons { position: absolute; bottom: 6mm; left: 5mm; right: 5mm; display: flex; justify-content: space-between; }
+  .lock-buttons span { width: 7.5mm; height: 7.5mm; border-radius: 50%; background: rgba(0, 0, 0, 0.28); }
+  .home-bar { position: absolute; bottom: 2.4mm; left: 50%; transform: translateX(-50%); width: 18mm; height: 1mm; border-radius: 1mm; background: #fff; }
+
+  /* Le badge dans l'app Cartes (pictogramme, non scannable) */
+  .pass {
+    position: absolute; left: -2mm; top: 57mm; width: 40mm; transform: rotate(-7deg);
+    border-radius: 3.2mm; padding: 2.8mm 3mm 3.2mm; background: var(--navy); color: #fff;
+    box-shadow: 0 2.5mm 6mm rgba(27, 37, 71, 0.35);
+  }
+  .pass .head { display: flex; align-items: center; gap: 1.6mm; font-size: 7.2pt; font-weight: 600; }
+  .pass .head img { width: 4.4mm; height: 4.4mm; border-radius: 1.1mm; }
+  .pass dl { margin: 2mm 0 0; }
+  .pass dt { font-size: 5pt; font-weight: 600; letter-spacing: 0.5pt; color: var(--label); }
+  .pass dd { margin: 0 0 1.2mm; font-size: 7.6pt; }
+  .pass .glyph { margin: 1.2mm auto 0; width: 14mm; height: 14mm; border-radius: 1.4mm; background: #fff; padding: 2mm; }
+
+  /* Étapes */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+  .step { border: 0.35mm solid #e3e6ee; border-radius: 4.5mm; padding: 3.6mm 4mm 3.8mm; }
+  .step .n {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 7mm; height: 7mm; border-radius: 50%; background: var(--coral); color: #fff;
+    font-weight: 800; font-size: 10.5pt;
+  }
+  .step h3 { margin: 2.2mm 0 1.2mm; font-size: 12pt; line-height: 1.2; color: var(--navy); }
+  .step p { margin: 0; font-size: 9.3pt; line-height: 1.38; color: var(--muted); }
+
+  /* Téléchargement */
+  .cta {
+    display: grid; grid-template-columns: 46mm 1fr; gap: 8mm; align-items: center;
+    background: var(--navy); color: #fff; border-radius: 7mm; padding: 6mm 9mm 6mm 6mm;
+  }
+  .qr { width: 46mm; height: 46mm; background: #fff; border-radius: 3.5mm; padding: 4mm; }
+  .qr img { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  .cta h2 { margin: 0; font-family: "Inter Display", "Inter", sans-serif; font-size: 21pt; line-height: 1.1; letter-spacing: -0.4pt; }
+  .cta .how { margin: 2.4mm 0 0; font-size: 11.5pt; line-height: 1.4; }
+  .cta .alt { margin: 1.6mm 0 0; font-size: 10pt; color: #c9cfe0; }
+  .cta .android {
+    margin: 3.6mm 0 0; padding-top: 3.2mm; border-top: 0.3mm solid rgba(255, 255, 255, 0.22);
+    font-size: 10pt; line-height: 1.4; color: #e4e7f0;
+  }
+  .cta .android strong { color: var(--label); }
+
+  /* Pied de page */
+  .foot { margin-top: auto; font-size: 8.6pt; line-height: 1.45; color: var(--muted); }
+  .foot p { margin: 0; }
+  .foot .assoc { color: var(--text); font-size: 9.6pt; }
+  .foot .legal { margin-top: 1.4mm; font-size: 7.4pt; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="top">
+    <div class="brand">
+      <img src="../../docs/icon-512.png" alt="">
+      <div><strong>Badge Crèche</strong><span>L'app gratuite des parents de crèche</span></div>
+    </div>
+    <div class="by">Une initiative de l'<strong>APPC</strong><br>Parents à Paris Centre</div>
+  </header>
+
+  <section class="hero">
+    <div class="copy">
+      <p class="kicker">Arrivée et départ de la crèche</p>
+      <h1>Fini le badge de crèche <em>oublié&nbsp;!</em></h1>
+      <p class="lead">Le QR code de la badgeuse dans votre iPhone. Il <strong>s'affiche tout seul</strong> sur l'écran verrouillé quand vous arrivez à la crèche.</p>
+      <ul class="perks">
+        <li><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#ff7a59"/><path d="M7 12.4l3.2 3.2L17.2 8.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Gratuite, sans publicité</li>
+        <li><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#ff7a59"/><path d="M7 12.4l3.2 3.2L17.2 8.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Sans compte à créer</li>
+        <li><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#ff7a59"/><path d="M7 12.4l3.2 3.2L17.2 8.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Vos données restent sur votre iPhone</li>
+        <li><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#ff7a59"/><path d="M7 12.4l3.2 3.2L17.2 8.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Fonctionne même sans réseau</li>
+      </ul>
+    </div>
+
+    <div class="visual" aria-hidden="true">
+      <div class="phone">
+        <div class="screen">
+          <div class="island"></div>
+          <div class="date">mardi 3 novembre</div>
+          <div class="time">8:42</div>
+          <div class="notif">
+            <img src="../../docs/icon-512.png" alt="">
+            <div><b>Badge crèche</b><span>Vous arrivez à la crèche : votre badge est prêt.</span></div>
+            <i>maintenant</i>
+          </div>
+          <div class="lock-buttons"><span></span><span></span></div>
+          <div class="home-bar"></div>
+        </div>
+      </div>
+      <div class="pass">
+        <div class="head"><img src="../../docs/icon-512.png" alt="">Badge crèche</div>
+        <dl><dt>ENFANT</dt><dd>Léa</dd><dt>CRÈCHE</dt><dd>Crèche des Lilas</dd></dl>
+        <div class="glyph">
+          <svg viewBox="0 0 10 10" width="100%" height="100%">
+            <g fill="none" stroke="#22305a" stroke-width="0.8">
+              <rect x="0.4" y="0.4" width="3.6" height="3.6"/><rect x="6" y="0.4" width="3.6" height="3.6"/><rect x="0.4" y="6" width="3.6" height="3.6"/>
+            </g>
+            <g fill="#22305a">
+              <rect x="1.6" y="1.6" width="1.2" height="1.2"/><rect x="7.2" y="1.6" width="1.2" height="1.2"/><rect x="1.6" y="7.2" width="1.2" height="1.2"/>
+              <rect x="5.6" y="5.6" width="1.4" height="1.4"/><rect x="8.6" y="5.6" width="1.4" height="1.4"/><rect x="7.1" y="7.1" width="1.4" height="1.4"/>
+              <rect x="5.6" y="8.6" width="1.4" height="1.4"/><rect x="8.6" y="8.6" width="1.4" height="1.4"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="steps">
+    <div class="step"><span class="n">1</span><h3>Choisissez votre crèche</h3><p>Toutes les crèches de Paris sont dans la liste.</p></div>
+    <div class="step"><span class="n">2</span><h3>Scannez votre QR code</h3><p>Celui remis par la crèche : papier, photo, capture ou PDF.</p></div>
+    <div class="step"><span class="n">3</span><h3>Ajoutez-le à l'app Cartes</h3><p>C'est Apple Wallet. À la badgeuse, présentez simplement l'écran.</p></div>
+  </section>
+
+  <section class="cta">
+    <div class="qr"><img src="qr-telecharger.svg" alt="QR code de téléchargement"></div>
+    <div>
+      <h2>Scannez pour installer l'app</h2>
+      <p class="how">Ouvrez l'appareil photo de votre iPhone et visez ce code.</p>
+      <p class="alt">Ou cherchez « Badge Crèche » dans l'App Store.</p>
+      <p class="android"><strong>Sur Android ?</strong> L'app arrive bientôt sur Google Play. Scannez le même code pour la tester en avant-première.</p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p class="assoc">Badge Crèche est proposée gratuitement par l'<strong>APPC</strong>, l'association des parents de Paris Centre. Rejoignez la communauté des parents depuis l'app.</p>
+    <p class="legal">Testez-le une première fois à la badgeuse et gardez votre badge d'origine en secours. Application indépendante, non affiliée à la Ville de Paris ni aux gestionnaires de crèches. Apple Wallet est une marque d'Apple Inc.</p>
+  </footer>
+
+</div>
+</body>
+</html>
