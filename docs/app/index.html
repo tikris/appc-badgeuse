@@ -15,7 +15,7 @@
     sinon, la page affiche les liens. Aucun traceur, aucune statistique.
   -->
   <script>
-    var APP_STORE = "";   // lien de la fiche App Store (Partager → Copier le lien), ex. https://apps.apple.com/fr/app/…/id…
+    var APP_STORE = "https://apps.apple.com/fr/app/badgeuse-cr%C3%A8che-appc/id6823635433";
     var GOOGLE_PLAY = ""; // https://play.google.com/store/apps/details?id=fr.parentsapariscentre.badgecreche, une fois en production
     var ua = navigator.userAgent;
     var ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
@@ -35,7 +35,7 @@
   <div class="card" id="iphone">
     <h2>Sur iPhone</h2>
     <p id="ios-link" hidden><a class="button" href="#">Télécharger dans l'App Store</a></p>
-    <p id="ios-search">Ouvrez l'App Store et cherchez « <strong>Badge Crèche</strong> ».</p>
+    <p id="ios-search">Ouvrez l'App Store et cherchez « <strong>Badgeuse Crèche</strong> ».</p>
   </div>
 
   <div class="card" id="android">
