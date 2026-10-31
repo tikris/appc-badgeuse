@@ -1,0 +1,61 @@
+name: Service de signature
+
+# Service qui signe les badges Wallet (dossier server/) : la clé du certificat Pass Type ID y reste,
+# hors de l'application. Tests à chaque modification ; déploiement sur Scaleway (Paris) à la demande.
+#
+# Secrets GitHub : SCW_SECRET_KEY (clé API d'une application IAM limitée au projet, permissions
+# FunctionsFullAccess) et SCW_PROJECT_ID. Le certificat et la clé du service sont saisis dans la
+# console Scaleway (variables secrètes de la fonction), jamais dans GitHub.
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "server/**"
+      - ".github/workflows/signature.yml"
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Déployer sur Scaleway après les tests"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r server/requirements.txt
+      - run: python -m unittest discover -s server/tests -v
+
+  deploy:
+    needs: tests
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Archive (code, dépendances Linux, racines Apple)
+        run: |
+          set -euo pipefail
+          mkdir -p build/signature
+          cp server/handler.py server/service.py server/attestation.py build/signature/
+          pip install --quiet --target build/signature/package --platform manylinux2014_x86_64 \
+            --python-version 3.13 --only-binary=:all: -r server/requirements.txt
+          curl -fsSL https://www.apple.com/certificateauthority/AppleWWDRCAG4.cer -o build/signature/AppleWWDRCAG4.cer
+          curl -fsSL https://www.apple.com/certificateauthority/Apple_App_Attestation_Root_CA.pem \
+            -o build/signature/Apple_App_Attestation_Root_CA.pem
+          # Empreintes à comparer avec celles publiées par Apple.
+          openssl x509 -inform DER -in build/signature/AppleWWDRCAG4.cer -noout -subject -fingerprint -sha256
+          openssl x509 -in build/signature/Apple_App_Attestation_Root_CA.pem -noout -subject -fingerprint -sha256
+          (cd build/signature && zip -qr ../signature.zip .)
+          ls -l build/signature.zip
+      - name: Déploiement Scaleway
+        env:
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_PROJECT_ID: ${{ secrets.SCW_PROJECT_ID }}
+        run: python3 server/deploy.py build/signature.zip
