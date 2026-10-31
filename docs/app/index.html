@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Télécharger Badge Crèche – APPC</title>
+  <meta name="description" content="Télécharger Badge Crèche, l'app gratuite de l'APPC qui garde le QR code de la crèche dans votre téléphone.">
+  <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+  <link rel="icon" href="../apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+  <style>.card h2 { margin-top: 0.4rem; }</style>
+  <!--
+    Adresse imprimée en QR code sur le prospectus (communication/prospectus) : elle ne doit
+    jamais changer. iPhone → App Store, Android → Google Play dès que l'app y est publiée ;
+    sinon, la page affiche les liens. Aucun traceur, aucune statistique.
+  -->
+  <script>
+    var APP_STORE = "https://apps.apple.com/fr/app/badgeuse-cr%C3%A8che-appc/id6823635433";
+    var GOOGLE_PLAY = ""; // https://play.google.com/store/apps/details?id=fr.parentsapariscentre.badgecreche, une fois en production
+    var ua = navigator.userAgent;
+    var ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    var android = /Android/.test(ua);
+    if (ios && APP_STORE) location.replace(APP_STORE);
+    else if (android && GOOGLE_PLAY) location.replace(GOOGLE_PLAY);
+  </script>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <img src="../icon-512.png" alt="Icône Badge Crèche">
+    <h1>Badge Crèche</h1>
+    <p class="lead">Le QR code de la badgeuse de votre crèche dans votre téléphone, affiché automatiquement quand vous arrivez. Gratuite, sans compte ni publicité.</p>
+  </header>
+
+  <div class="card" id="iphone">
+    <h2>Sur iPhone</h2>
+    <p id="ios-link" hidden><a class="button" href="#">Télécharger dans l'App Store</a></p>
+    <p id="ios-search">Ouvrez l'App Store et cherchez « <strong>Badgeuse Crèche</strong> ».</p>
+  </div>
+
+  <div class="card" id="android">
+    <h2>Sur Android</h2>
+    <p id="android-link" hidden><a class="button" href="#">Télécharger sur Google Play</a></p>
+    <div id="android-soon">
+      <p>L'app arrive bientôt sur Google Play. Pour la tester en avant-première ou être prévenu(e) de sa sortie, rejoignez la communauté de l'APPC et dites-le nous.</p>
+      <p><a class="button" href="https://chat.whatsapp.com/CiqGioqeO4yA93wTwvFJMW">Rejoindre la communauté WhatsApp</a></p>
+    </div>
+  </div>
+
+  <nav class="links">
+    <a href="../">Présentation de l'app</a>
+    <a href="../confidentialite.html">Confidentialité</a>
+    <a href="../mentions-legales.html">Mentions légales</a>
+  </nav>
+  <footer>Application indépendante, non affiliée à la Ville de Paris ni aux gestionnaires de crèches. Une initiative de l'association Parents à Paris Centre (APPC).</footer>
+</main>
+<script>
+  function show(link, url, fallback) {
+    if (!url) return;
+    var p = document.getElementById(link);
+    p.querySelector("a").href = url;
+    p.hidden = false;
+    document.getElementById(fallback).hidden = true;
+  }
+  show("ios-link", APP_STORE, "ios-search");
+  show("android-link", GOOGLE_PLAY, "android-soon");
+  // Le système de l'appareil passe en premier.
+  if (android) document.querySelector("main").insertBefore(document.getElementById("android"), document.getElementById("iphone"));
+</script>
+</body>
+</html>
