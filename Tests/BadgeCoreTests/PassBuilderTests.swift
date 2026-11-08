@@ -152,7 +152,52 @@ final class PassBuilderTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(BadgeData.self, from: JSONEncoder().encode(badge)).lockScreenDistance, .standard)
     }
 
+    // MARK: Heures de crèche
+
+    func testCrecheHoursAreAddedOnlyWhenChosen() throws {
+        var badge = Self.sampleBadge(showsChildName: false)
+        XCTAssertNil(try Self.passDictionary(for: badge)["relevantDates"])
+
+        badge.limitsLockScreenToCrecheHours = true
+        let now = try Self.parisDate("2026-11-09T08:00:00+01:00")
+        let json = try PassBuilder.passJSON(for: badge, passTypeIdentifier: "pass.x", teamIdentifier: "T", branding: Self.branding, now: now)
+        let pass = try XCTUnwrap(JSONSerialization.jsonObject(with: json) as? [String: Any])
+        let dates = try XCTUnwrap(pass["relevantDates"] as? [[String: String]])
+        XCTAssertNotNil(pass["locations"], "Dates et lieu à la fois : le badge n'est proposé que si les deux correspondent.")
+        XCTAssertEqual(dates.first, ["startDate": "2026-11-09T07:00:00+01:00", "endDate": "2026-11-09T10:30:00+01:00"])
+        // Six mois : 26 semaines de 5 jours, 2 créneaux par jour.
+        XCTAssertEqual(dates.count, 26 * 5 * 2)
+
+        // Sans affichage automatique, pas de créneaux non plus.
+        badge.lockScreenDistance = .never
+        XCTAssertNil(try Self.passDictionary(for: badge)["relevantDates"])
+    }
+
+    func testCrecheHoursSkipWeekendsAndFollowSummerTime() throws {
+        // Vendredi midi, veille du passage à l'heure d'été (dimanche 29 mars 2026).
+        let now = try Self.parisDate("2026-03-27T12:00:00+01:00")
+        let dates = CrecheHours.relevantDates(from: now, days: 4)
+        XCTAssertEqual(dates, [
+            // Le créneau du matin est passé ; samedi et dimanche sont sautés.
+            ["startDate": "2026-03-27T15:30:00+01:00", "endDate": "2026-03-27T19:30:00+01:00"],
+            ["startDate": "2026-03-30T07:00:00+02:00", "endDate": "2026-03-30T10:30:00+02:00"],
+            ["startDate": "2026-03-30T15:30:00+02:00", "endDate": "2026-03-30T19:30:00+02:00"],
+        ])
+    }
+
+    func testCrecheHoursChoiceIsSavedAndOptional() throws {
+        var badge = Self.sampleBadge(showsChildName: false)
+        XCTAssertFalse(badge.limitsLockScreenToCrecheHours)
+        badge.limitsLockScreenToCrecheHours = true
+        let decoded = try JSONDecoder().decode(BadgeData.self, from: JSONEncoder().encode(badge))
+        XCTAssertTrue(decoded.limitsLockScreenToCrecheHours)
+    }
+
     // MARK: Outils
+
+    static func parisDate(_ text: String) throws -> Date {
+        try XCTUnwrap(ISO8601DateFormatter().date(from: text))
+    }
 
     static let branding = PassBranding(
         defaultTitle: "Badge crèche",

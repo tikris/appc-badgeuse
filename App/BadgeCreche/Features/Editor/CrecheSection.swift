@@ -6,6 +6,8 @@ struct CrecheSection: View {
     @Binding var address: CrecheAddress?
     /// Distance d'affichage sur l'écran verrouillé, réglée avec l'emplacement de l'entrée.
     @Binding var lockScreenDistance: LockScreenDistance
+    /// Affichage limité aux heures de crèche (voir CrecheHours).
+    @Binding var crecheHoursOnly: Bool
     /// Appelé avec le nom de la crèche choisie (pour préremplir le nom affiché sur le badge), la façon
     /// dont elle l'a été et la crèche de la liste (statistiques facultatives, voir CrecheStat).
     let onSelect: (_ name: String, _ source: CrecheStat.Source, _ creche: Creche?) -> Void
@@ -76,9 +78,14 @@ struct CrecheSection: View {
             }
         }
         .sheet(isPresented: $isEditingLockScreen) {
-            LockScreenSettingsView(address: address, distance: lockScreenDistance) { newAddress, newDistance in
+            LockScreenSettingsView(
+                address: address,
+                distance: lockScreenDistance,
+                crecheHoursOnly: crecheHoursOnly
+            ) { newAddress, newDistance, newCrecheHoursOnly in
                 self.address = newAddress
                 lockScreenDistance = newDistance
+                crecheHoursOnly = newCrecheHoursOnly
             }
         }
         Button {
@@ -97,12 +104,12 @@ struct CrecheSection: View {
 
     private var footer: Text {
         guard address != nil else {
-            return Text("Votre position sert uniquement à trier les crèches, sur l'iPhone : elle n'est ni enregistrée ni transmise. Le badge s'affichera sur l'écran verrouillé devant la crèche.")
+            return Text("Votre position sert uniquement à trier les crèches, sur l'iPhone : elle n'est ni enregistrée ni transmise. Le badge sera proposé sur l'écran verrouillé aux abords de la crèche.")
         }
-        guard let meters = lockScreenDistance.meters else {
+        guard lockScreenDistance.meters != nil else {
             return Text("Le badge ne s'affiche pas tout seul sur l'écran verrouillé.")
         }
-        return Text("Le badge s'affiche sur l'écran verrouillé à \(meters) m maximum de l'entrée. « Écran verrouillé » : changer la distance ou placer l'entrée sur la carte.")
+        return Text("Le badge est proposé sur l'écran verrouillé aux abords de l'entrée : c'est iOS qui décide du moment, selon la précision de la position. « Écran verrouillé » : réglage, horaires et emplacement de l'entrée sur la carte.")
     }
 
     // MARK: Suggestions d'après la position

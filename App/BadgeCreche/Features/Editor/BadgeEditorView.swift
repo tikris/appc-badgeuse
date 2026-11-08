@@ -16,6 +16,7 @@ struct BadgeEditorView: View {
     @State private var crecheName: String
     @State private var address: CrecheAddress?
     @State private var lockScreenDistance: LockScreenDistance
+    @State private var crecheHoursOnly: Bool
     /// Pour les statistiques facultatives : comment la crèche a été choisie pendant cette édition.
     @State private var crecheChoice: (source: CrecheStat.Source, creche: Creche?)?
     @AppStorage(CrecheStats.consentKey) private var sharesCrecheStats = false
@@ -37,6 +38,7 @@ struct BadgeEditorView: View {
         // Pour un nouveau badge, la crèche est choisie d'après la position (pas de préremplissage).
         _address = State(initialValue: existing?.address)
         _lockScreenDistance = State(initialValue: existing?.lockScreenDistance ?? .standard)
+        _crecheHoursOnly = State(initialValue: existing?.limitsLockScreenToCrecheHours ?? false)
     }
 
     private var canSave: Bool {
@@ -46,7 +48,7 @@ struct BadgeEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                CrecheSection(address: $address, lockScreenDistance: $lockScreenDistance, onSelect: { name, source, creche in
+                CrecheSection(address: $address, lockScreenDistance: $lockScreenDistance, crecheHoursOnly: $crecheHoursOnly, onSelect: { name, source, creche in
                     crecheName = name
                     crecheChoice = (source, creche)
                 }, locatesOnAppear: existing == nil)
@@ -133,6 +135,7 @@ struct BadgeEditorView: View {
             updatedAt: Date()
         )
         badge.lockScreenDistance = lockScreenDistance
+        badge.limitsLockScreenToCrecheHours = crecheHoursOnly
         do {
             try onSave(badge)
             if let crecheChoice, existing?.address != address {

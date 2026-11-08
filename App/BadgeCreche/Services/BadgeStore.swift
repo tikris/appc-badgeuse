@@ -12,8 +12,13 @@ final class BadgeStore {
 
     /// À incrémenter quand le contenu du pass change (rayon d'affichage…) : la copie présente
     /// dans Wallet est alors remplacée au lancement suivant, sans action du parent.
-    private static let passRevision = 3
+    private static let passRevision = 4
     private static let passRevisionKey = "passRevision"
+
+    /// Avec l'option « heures de crèche », le pass porte six mois de créneaux datés : la copie de
+    /// Wallet est renouvelée à l'ouverture de l'app quand elle a plus d'un mois.
+    private static let walletWrittenKey = "walletWrittenAt"
+    private static let crecheHoursRenewal: TimeInterval = 30 * 24 * 3600
 
     private let fileURL: URL
 
@@ -25,8 +30,11 @@ final class BadgeStore {
         if let data = try? Data(contentsOf: fileURL) {
             badge = try? JSONDecoder().decode(BadgeData.self, from: data)
         }
-        needsWalletRefresh = badge != nil
-            && UserDefaults.standard.integer(forKey: Self.passRevisionKey) < Self.passRevision
+        let revisionIsOutdated = UserDefaults.standard.integer(forKey: Self.passRevisionKey) < Self.passRevision
+        let lastWrite = UserDefaults.standard.object(forKey: Self.walletWrittenKey) as? Date ?? .distantPast
+        let hoursAreRunningOut = badge?.limitsLockScreenToCrecheHours == true
+            && Date().timeIntervalSince(lastWrite) > Self.crecheHoursRenewal
+        needsWalletRefresh = badge != nil && (revisionIsOutdated || hoursAreRunningOut)
     }
 
     /// Badge de démonstration gardé en mémoire (captures d'écran).
@@ -48,7 +56,10 @@ final class BadgeStore {
 
     /// Le pass généré est à jour : inutile de remplacer de nouveau la copie de Wallet.
     func walletRefreshed() {
-        if needsWalletRefresh { needsWalletRefresh = false }
+        if needsWalletRefresh {
+            needsWalletRefresh = false
+            UserDefaults.standard.set(Date(), forKey: Self.walletWrittenKey)
+        }
         UserDefaults.standard.set(Self.passRevision, forKey: Self.passRevisionKey)
     }
 

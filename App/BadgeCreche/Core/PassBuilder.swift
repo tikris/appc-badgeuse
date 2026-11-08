@@ -31,7 +31,8 @@ nonisolated enum PassBuilder {
                     for: badge,
                     passTypeIdentifier: identity.passTypeIdentifier,
                     teamIdentifier: identity.teamIdentifier,
-                    branding: branding
+                    branding: branding,
+                    now: now
                 )
             ),
         ]
@@ -60,7 +61,8 @@ nonisolated enum PassBuilder {
         for badge: BadgeData,
         passTypeIdentifier: String,
         teamIdentifier: String,
-        branding: PassBranding
+        branding: PassBranding,
+        now: Date = Date()
     ) throws -> Data {
         let childName = badge.displayedChildName
         let crecheName = badge.displayedCrecheName
@@ -124,6 +126,10 @@ nonisolated enum PassBuilder {
                 ] as [String: Any],
             ]
             pass["maxDistance"] = meters
+            // Dates et lieu à la fois : le badge n'est proposé que si les deux correspondent.
+            if badge.limitsLockScreenToCrecheHours {
+                pass["relevantDates"] = CrecheHours.relevantDates(from: now)
+            }
         }
         return try JSONSerialization.data(withJSONObject: pass, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
     }
