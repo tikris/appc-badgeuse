@@ -51,9 +51,9 @@ Le numéro de build est celui du projet (`CURRENT_PROJECT_VERSION`), ou celui sa
 
 Nouvelle app : plateforme iOS, langue principale **Français**, bundle ID de votre projet, SKU `appc-badge-creche`.
 
-**Nom** (30 car. max)
+**Nom** (30 car. max), tel qu'enregistré sur l'App Store ; sous l'icône, l'iPhone affiche « Badge Crèche »
 ```
-Badge Crèche – APPC
+Badgeuse Crèche – APPC
 ```
 
 **Sous-titre** (30 car. max) — en France, l'app Apple Wallet s'appelle « Cartes » sur l'iPhone

@@ -3,7 +3,7 @@
 # La signature App Store est gérée par Apple (clé API « Admin ») : seul ce certificat, embarqué dans l'app
 # pour signer les badges, vient du Mac.
 #
-#   bash <(curl -fsSL https://raw.githubusercontent.com/tikris/appc-badgeuse/claude/gracious-fermi-astcip/tools/secrets_signature.sh)
+#   bash <(curl -fsSL https://raw.githubusercontent.com/tikris/appc-badgeuse/main/tools/secrets_signature.sh)
 #
 # Lancé de préférence depuis le dossier du projet (le mot de passe du certificat y est lu).
 # 1. Trouve le certificat (.p12) : projet, Bureau, Téléchargements, ou fichier glissé dans le Terminal ;

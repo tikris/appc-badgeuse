@@ -19,6 +19,7 @@ import html
 import io
 import json
 import math
+import os
 import re
 import sys
 import time
@@ -440,6 +441,18 @@ def kind_of_row(row):
     return kind
 
 
+def check_size(previous_count, new_count, threshold=0.9):
+    """Garde-fou : une source cassée (page modifiée, API en panne) ne doit pas vider la liste de l'app.
+
+    Refuse d'écrire une liste qui perd plus de 10 % des établissements, sauf ACCEPTER_BAISSE=1
+    (baisse réelle, vérifiée à la main).
+    """
+    if previous_count and new_count < threshold * previous_count and os.environ.get("ACCEPTER_BAISSE") != "1":
+        sys.exit(f"❌ {new_count} établissements contre {previous_count} dans la liste actuelle "
+                 f"(baisse de plus de {round((1 - threshold) * 100)} %) : liste non écrite. Vérifiez les sources, "
+                 "ou relancez avec « Accepter une baisse » si elle est réelle.")
+
+
 def main():
     output = Path(sys.argv[1]) if len(sys.argv) > 1 else OUTPUT
     previous = previous_creches(output)
@@ -533,6 +546,7 @@ def main():
         "generated": datetime.date.today().isoformat(),
         "creches": creches,
     }
+    check_size(len(previous), len(creches))
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(document, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"{len(creches)} établissements écrits dans {output} ({output.stat().st_size // 1024} Ko)")
