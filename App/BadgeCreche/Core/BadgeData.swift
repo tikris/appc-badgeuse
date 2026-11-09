@@ -32,7 +32,8 @@ nonisolated enum LockScreenDistance: Int, CaseIterable, Identifiable {
     static let choices: [LockScreenDistance] = [.door, .approach, .never]
 }
 
-/// Le badge enregistré localement. Version 1 : un seul badge par iPhone.
+/// Un badge enregistré localement : un par enfant et par crèche. Une nounou ou une famille peut en
+/// avoir plusieurs ; chacun est un pass distinct dans Wallet (numéro de série propre).
 nonisolated struct BadgeData: Codable, Hashable {
     /// Identifiant stable du pass dans Wallet (permet de le mettre à jour plutôt que d'en créer un second).
     var serialNumber: String
@@ -74,6 +75,26 @@ nonisolated struct BadgeData: Codable, Hashable {
     var displayedCrecheName: String? {
         let name = crecheName.trimmingCharacters(in: .whitespacesAndNewlines)
         return name.isEmpty ? nil : name
+    }
+
+    /// Liste enregistrée : tableau JSON, ou badge seul (version 1, un seul badge par iPhone).
+    static func list(from data: Data) throws -> [BadgeData] {
+        let decoder = JSONDecoder()
+        if let badges = try? decoder.decode([BadgeData].self, from: data) {
+            return badges
+        }
+        return [try decoder.decode(BadgeData.self, from: data)]
+    }
+
+    /// Nom qui distingue les badges dans l'app (liste, titre). Rien de plus n'apparaît sur le pass.
+    var listTitle: String {
+        displayedChildName ?? displayedCrecheName ?? address.name ?? "Badge"
+    }
+
+    /// Crèche du badge, pour la liste, quand elle n'est pas déjà le titre.
+    var listSubtitle: String? {
+        let creche = address.name ?? address.label
+        return creche == listTitle ? nil : creche
     }
 
     /// Encodage du QR code : ISO-8859-1 (valeur recommandée par Apple) quand le contenu est en ASCII,

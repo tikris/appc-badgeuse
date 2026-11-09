@@ -1,11 +1,13 @@
 import PassKit
 import SwiftUI
 
-/// Écran principal une fois le badge créé : aperçu, ajout à Wallet, modification.
+/// Écran d'un badge : aperçu, ajout à Wallet, modification, suppression.
 struct BadgeHomeView: View {
     let badge: BadgeData
     let store: BadgeStore
     let onEdit: () -> Void
+    /// « Ajouter un badge » (autre enfant, nounou) : seulement quand c'est l'unique badge.
+    var onAdd: (() -> Void)? = nil
 
     @Environment(\.openURL) private var openURL
     @State private var pass: PKPass?
@@ -31,6 +33,12 @@ struct BadgeHomeView: View {
                 tips
 
                 VStack(spacing: 12) {
+                    if let onAdd {
+                        Button(action: onAdd) {
+                            Label("Ajouter un badge (autre enfant, nounou…)", systemImage: "plus")
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
                     Button(action: onEdit) {
                         Label("Modifier le badge", systemImage: "pencil")
                             .frame(maxWidth: .infinity)
@@ -142,10 +150,10 @@ struct BadgeHomeView: View {
             let newPass = try await WalletService.makePass(for: badge)
             guard !Task.isCancelled else { return }
             pass = newPass
-            if store.needsWalletRefresh, WalletService.replaceInWallet(with: newPass) {
+            if store.needsWalletRefresh(badge.serialNumber), WalletService.replaceInWallet(with: newPass) {
                 statusMessage = "Badge mis à jour dans Apple Wallet."
             }
-            store.walletRefreshed()
+            store.walletRefreshed(badge.serialNumber)
             let installed = WalletService.installedPass(matching: newPass)
             isInWallet = installed != nil
             walletURL = installed?.passURL
@@ -159,6 +167,6 @@ struct BadgeHomeView: View {
         if let pass {
             WalletService.removeFromWallet(pass)
         }
-        store.delete()
+        store.delete(badge.serialNumber)
     }
 }
