@@ -1,7 +1,7 @@
 #!/bin/bash
 # Crée le certificat Wallet (Pass Type ID) du service de signature et le copie vers Scaleway, depuis le Mac.
 #
-#   bash <(curl -fsSL https://raw.githubusercontent.com/tikris/appc-badgeuse/claude/gracious-fermi-astcip/tools/certificat_serveur.sh)
+#   bash <(curl -fsSL https://raw.githubusercontent.com/tikris/appc-badgeuse/main/tools/certificat_serveur.sh)
 #
 # 1. Génère une clé privée et une demande de certificat (CSR) dans un dossier temporaire.
 # 2. Ouvre developer.apple.com : « Pass Type ID Certificate », envoi de la CSR, téléchargement de pass.cer.

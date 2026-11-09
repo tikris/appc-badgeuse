@@ -1,11 +1,13 @@
 import PassKit
 import SwiftUI
 
-/// Écran principal une fois le badge créé : aperçu, ajout à Wallet, modification.
+/// Écran d'un badge : aperçu, ajout à Wallet, modification, suppression.
 struct BadgeHomeView: View {
     let badge: BadgeData
     let store: BadgeStore
     let onEdit: () -> Void
+    /// « Ajouter un badge » (autre enfant, nounou) : seulement quand c'est l'unique badge.
+    var onAdd: (() -> Void)? = nil
 
     @Environment(\.openURL) private var openURL
     @State private var pass: PKPass?
@@ -31,6 +33,12 @@ struct BadgeHomeView: View {
                 tips
 
                 VStack(spacing: 12) {
+                    if let onAdd {
+                        Button(action: onAdd) {
+                            Label("Ajouter un badge (autre enfant, nounou…)", systemImage: "plus")
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
                     Button(action: onEdit) {
                         Label("Modifier le badge", systemImage: "pencil")
                             .frame(maxWidth: .infinity)
@@ -108,8 +116,8 @@ struct BadgeHomeView: View {
 
     private var tips: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if let meters = badge.lockScreenDistance.meters {
-                Label("Le badge s'affiche sur l'écran verrouillé à \(meters) m maximum de la crèche (Service de localisation activé).", systemImage: "location")
+            if badge.lockScreenDistance.meters != nil {
+                Label(lockScreenTip, systemImage: "location")
             } else {
                 Label("Affichage automatique sur l'écran verrouillé désactivé : à réactiver dans « Modifier le badge ».", systemImage: "location.slash")
             }
@@ -123,6 +131,15 @@ struct BadgeHomeView: View {
         .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
     }
 
+    /// Aux abords de la crèche, sans distance promise : iOS ajoute l'imprécision de la position.
+    private var lockScreenTip: String {
+        var text = "Le badge est proposé sur l'écran verrouillé aux abords de la crèche, souvent un peu avant la porte : c'est iOS qui décide du moment (Service de localisation activé)."
+        if #available(iOS 18, *), badge.limitsLockScreenToCrecheHours {
+            text += " Seulement \(CrecheHours.summary)."
+        }
+        return text
+    }
+
     private var errorIsPresented: Binding<Bool> {
         Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
     }
@@ -133,10 +150,10 @@ struct BadgeHomeView: View {
             let newPass = try await WalletService.makePass(for: badge)
             guard !Task.isCancelled else { return }
             pass = newPass
-            if store.needsWalletRefresh, WalletService.replaceInWallet(with: newPass) {
+            if store.needsWalletRefresh(badge.serialNumber), WalletService.replaceInWallet(with: newPass) {
                 statusMessage = "Badge mis à jour dans Apple Wallet."
             }
-            store.walletRefreshed()
+            store.walletRefreshed(badge.serialNumber)
             let installed = WalletService.installedPass(matching: newPass)
             isInWallet = installed != nil
             walletURL = installed?.passURL
@@ -150,6 +167,6 @@ struct BadgeHomeView: View {
         if let pass {
             WalletService.removeFromWallet(pass)
         }
-        store.delete()
+        store.delete(badge.serialNumber)
     }
 }

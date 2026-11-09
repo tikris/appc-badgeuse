@@ -16,7 +16,7 @@ struct WelcomeView: View {
                     Text("Votre badge de crèche dans Apple Wallet")
                         .font(.title2.bold())
                         .multilineTextAlignment(.center)
-                    Text("Plus besoin de chercher le badge : il s'affiche tout seul sur l'écran verrouillé quand vous arrivez à la crèche.")
+                    Text("Plus besoin de chercher le badge : il est proposé sur l'écran verrouillé aux abords de la crèche. Un badge par enfant, et plusieurs si vous gardez plusieurs enfants.")
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
                 }

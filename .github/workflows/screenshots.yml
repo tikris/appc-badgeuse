@@ -23,7 +23,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Xcode stable le plus récent
         run: |
           set -euo pipefail
@@ -80,7 +80,7 @@ jobs:
             [ "$(stat -f%z "shots/$scene.png")" -gt 150000 ] || { echo "::error::Capture $scene vide"; exit 1; }
           done
           sips -g pixelWidth -g pixelHeight shots/*.png
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: captures-app-store
           path: shots/*.png

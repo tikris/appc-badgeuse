@@ -2,7 +2,7 @@
 
 L'APPC met à disposition une badgeuse intégrée à son portefeuille iPhone pour badger à l'arrivée et au départ de la crèche.
 
-**Badge Crèche** transforme le QR code remis par la crèche en début d'année en pass **Apple Wallet**, qui s'affiche tout seul sur l'écran verrouillé devant la crèche (à 10 m par défaut ; 25 m, 50 m ou jamais au choix, avec l'entrée de la crèche ajustable sur la carte).
+**Badge Crèche** transforme le QR code remis par la crèche en début d'année en pass **Apple Wallet**, proposé sur l'écran verrouillé aux abords de la crèche : au plus près, plus tôt ou jamais, avec l'entrée ajustable sur la carte et, à partir d'iOS 18, l'option « Seulement aux heures de crèche » (en semaine, 7 h–10 h 30 et 15 h 30–19 h 30). iOS ajoute au rayon choisi l'imprécision de la position : en ville, le badge apparaît souvent quelques dizaines de mètres avant la porte. Plusieurs badges possibles (plusieurs enfants, nounou) : chacun est un pass distinct dans Wallet.
 
 - Parcours : l'app demande la position et propose **les 3 crèches les plus proches** ; « Autre crèche » ouvre la liste des **1 176 établissements d'accueil de Paris** (recherche, classement par arrondissement), avec en dernier recours une recherche d'adresse Apple Plans.
 - Champs : crèche (obligatoire, pour l'affichage à proximité), QR code (obligatoire), nom de la crèche et nom de l'enfant affichés sur le badge (facultatifs ; celui de l'enfant est désactivé par défaut).

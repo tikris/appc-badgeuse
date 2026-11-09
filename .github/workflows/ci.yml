@@ -19,7 +19,7 @@ jobs:
     name: Signature des pass (tests macOS + OpenSSL)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Xcode stable le plus récent
         run: |
           set -euo pipefail
@@ -69,7 +69,7 @@ jobs:
             isolation: nonisolated
             approachable: "NO"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Xcode stable le plus récent
         run: |
           set -euo pipefail

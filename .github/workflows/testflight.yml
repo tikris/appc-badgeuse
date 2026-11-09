@@ -37,6 +37,10 @@ on:
         type: boolean
         default: false
 
+# Le jeton GitHub n'écrit rien : seuls les secrets App Store Connect servent à l'envoi.
+permissions:
+  contents: read
+
 concurrency:
   group: testflight
   cancel-in-progress: false
@@ -49,7 +53,7 @@ jobs:
     outputs:
       build_number: ${{ steps.archive.outputs.build }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Xcode stable le plus récent
         run: |
           set -euo pipefail
@@ -183,7 +187,7 @@ jobs:
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Envoi des captures
         run: |
           set -euo pipefail
@@ -205,7 +209,7 @@ jobs:
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Préparation de la version
         env:
           BUILD_INPUT: ${{ needs.build.outputs.build_number || inputs.build_number }}

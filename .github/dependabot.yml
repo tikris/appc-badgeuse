@@ -1,0 +1,27 @@
+# Mises à jour automatiques proposées en pull request, une fois par semaine, regroupées pour limiter le bruit.
+# L'app iOS n'a aucune dépendance tierce : seuls les actions GitHub et le service de signature sont suivis.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Paris
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "CI"
+
+  - package-ecosystem: pip
+    directory: /server
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Paris
+    groups:
+      signature:
+        patterns: ["*"]
+    commit-message:
+      prefix: "Service de signature"
